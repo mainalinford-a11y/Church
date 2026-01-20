@@ -35,7 +35,7 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Annual Cards
+            // Annual Cards - Pulled from the main summary
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -43,24 +43,24 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly Navigation - SORTED JAN TO DEC
+            // Weekly History - Sort chronologically (Jan to Dec)
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
-            currentWeekIndex = 0; // Starts at the first available week in Jan
+            currentWeekIndex = 0; 
             updateWeeklyDisplay();
 
-            // Cell Analytics (Restored to Overview)
+            // Cell Analytics
             document.getElementById('cell-analytics-data').innerHTML = data.topCells
                 .map((c, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
                     <span><b>${i+1}. ${c[0]}</b></span>
                     <span>KES ${Number(c[1]).toLocaleString()}</span>
                 </div>`).join('');
 
-            // Full Member List (In Members Tab)
+            // Members Tab Full List
             document.querySelector('#members-table tbody').innerHTML = data.members
                 .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Progress
+            // Monthly Progress Tab
             let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
                 mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
@@ -76,14 +76,33 @@ function updateWeeklyDisplay() {
     const weekData = weeklyDataGrouped[dateKey];
     document.getElementById('week-label').innerText = dateKey;
 
-    let incHtml = weekData.income.map(i => `<li>${i.name} <span>${i.amount.toLocaleString()}</span></li>`).join('');
-    incHtml += `<li class="total-row">TOTAL INCOME <span>${(weekData.totals.inc || 0).toLocaleString()}</span></li>`;
+    // INTERNAL MATH LOGIC: 
+    // We filter out any row that contains the word "TOTAL" to avoid double-counting
+    let calcIncomeTotal = 0;
+    let incHtml = weekData.income
+        .filter(i => !i.name.toUpperCase().includes("TOTAL"))
+        .map(i => {
+            const val = parseFloat(i.amount) || 0;
+            calcIncomeTotal += val;
+            return `<li>${i.name} <span>${val.toLocaleString()}</span></li>`;
+        }).join('');
+    
+    incHtml += `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
     document.getElementById('income-details').innerHTML = incHtml;
 
-    let expHtml = weekData.expense.map(e => `<li>${e.name} <span>${e.amount.toLocaleString()}</span></li>`).join('');
-    expHtml += `<li class="total-row">TOTAL EXPENDITURE <span>${(weekData.totals.exp || 0).toLocaleString()}</span></li>`;
-    const wBal = weekData.totals.bal || 0;
-    expHtml += `<li style="color:${wBal >= 0 ? 'green' : 'red'}; font-weight:bold; border:none;">WEEKLY BALANCE <span>${wBal.toLocaleString()}</span></li>`;
+    let calcExpenseTotal = 0;
+    let expHtml = weekData.expense
+        .filter(e => !e.name.toUpperCase().includes("TOTAL"))
+        .map(e => {
+            const val = parseFloat(e.amount) || 0;
+            calcExpenseTotal += val;
+            return `<li>${e.name} <span>${val.toLocaleString()}</span></li>`;
+        }).join('');
+
+    const weeklyBalance = calcIncomeTotal - calcExpenseTotal;
+    
+    expHtml += `<li class="total-row">TOTAL EXPENDITURE <span>${calcExpenseTotal.toLocaleString()}</span></li>`;
+    expHtml += `<li style="color:${weeklyBalance >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:bold; border:none; margin-top:5px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
     document.getElementById('expense-details').innerHTML = expHtml;
 }
 
@@ -110,6 +129,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
