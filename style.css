@@ -54,6 +54,19 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 
 @media (max-width: 600px) { .breakdown-lists { flex-direction: column; } }
 
+.breakdown-lists {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    width: 100%;
+}
+
+.list-col {
+    flex: 1;
+    min-width: 0; /* Prevents overlap on small screens */
+}
+
+
 
 
 
