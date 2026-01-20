@@ -5,99 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ST MARKS ACK GITUNDU - Executive Portal</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div id="login-container">
-        <div class="card login-card">
-            <h1>ACK GITUNDU PORTAL</h1>
-            <p>Authorized Personnel Only</p>
+
+    <div class="login-container" id="login-container">
+        <div class="login-box">
+            <h2><i class="fas fa-church"></i> ST MARKS ACK GITUNDU</h2>
+            <p>Executive Dashboard Access</p>
             <input type="password" id="pass" placeholder="Enter Access Code">
-            <button onclick="checkLogin()">Login</button>
+            <button onclick="checkLogin()">Enter Portal</button>
         </div>
     </div>
 
-    <div id="dashboard" style="display:none;">
+    <div class="dashboard" id="dashboard">
         <header>
-            <div class="header-nav">
-                <div class="brand">
-                    <h1>ST MARKS ACK GITUNDU</h1>
-                    <span id="user-tag"></span>
-                </div>
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('summary')">Briefing</button>
-                    <button class="tab-btn" onclick="switchTab('members')">Members</button>
-                    <button class="tab-btn" onclick="switchTab('reports')">Monthly/Annual</button>
-                </div>
-                <button class="logout-btn" onclick="logout()">Logout</button>
+            <div class="header-title">
+                <h1>ST MARKS ACK GITUNDU</h1>
+                <span id="user-tag"></span>
             </div>
+            <button class="logout-btn" onclick="logout()" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
         </header>
 
-        <main class="main-content">
-            <div id="tab-summary" class="tab-content active">
-                <div class="grid">
-                    <div class="card finance-card income">
-                        <h3>Last Sunday Income</h3>
-                        <h2 id="total-income">KES 0</h2>
-                        <button onclick="toggleDetails('income-details')" class="view-btn">View Breakdown</button>
-                        <ul id="income-details" class="details-list" style="display:none;"></ul>
-                    </div>
-                    <div class="card finance-card expense">
-                        <h3>Last Sunday Expenses</h3>
-                        <h2 id="total-expense">KES 0</h2>
-                        <button onclick="toggleDetails('expense-details')" class="view-btn">View Breakdown</button>
-                        <ul id="expense-details" class="details-list" style="display:none;"></ul>
-                    </div>
-                </div>
-                
-                <div class="card wide">
-                    <h3>🏆 Annual Cell Rankings</h3>
-                    <div id="leaderboard-data" class="leaderboard-list"></div>
-                </div>
+        <nav class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">
+                <i class="fas fa-chart-line"></i> Overview
+            </button>
+            <button class="tab-btn" onclick="switchTab('members')">
+                <i class="fas fa-users"></i> Members Register
+            </button>
+            <button class="tab-btn" onclick="switchTab('analytics')">
+                <i class="fas fa-chart-bar"></i> Monthly Progress
+            </button>
+        </nav>
+
+        <div id="tab-overview" class="tab-content active">
+            <div class="last-sync">
+                <i class="fas fa-sync"></i> Last Updated: <span id="sync-time">Syncing...</span>
             </div>
 
-            <div id="tab-members" class="tab-content">
-                <div class="card wide">
-                    <div class="table-header">
-                        <h3>👥 Church Register</h3>
-                        <input type="text" id="memberSearch" placeholder="Search name..." onkeyup="searchTable()">
-                    </div>
-                    <div class="table-container">
-                        <table id="members-table">
-                            <thead><tr><th>Name</th><th>ID</th><th>Cell</th><th>Role</th><th>Contact</th></tr></thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+            <div class="summary-cards">
+                <div class="card">
+                    <div class="card-icon income-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                    <h3>Total Income</h3>
+                    <div class="number" id="total-income">...</div>
+                    <div class="trend">Latest Sunday Collection</div>
                 </div>
-            </div>
-
-            <div id="tab-reports" class="tab-content">
-                <div class="card wide">
-                    <h3>📈 Monthly Financial Progress</h3>
-                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 10px;">Summary of Monthly Income vs Expenditure</p>
-                    <div id="growth-chart-data" class="table-container"></div>
+                <div class="card">
+                    <div class="card-icon expense-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                    <h3>Total Expenditure</h3>
+                    <div class="number" id="total-expense">...</div>
+                    <div class="trend">Weekly Expenses</div>
                 </div>
-            </div>
+                <div class="card balance-card">
+                    <div class="card-icon balance-icon"><i class="fas fa-wallet"></i></div>
+                    <h3>Net Balance</h3>
 
-            <div class="card wide center">
-                <div id="admin-controls" style="display:none;">
-                    <h3 style="color: var(--primary);">Treasurer Controls</h3>
-                    <p>Access the master spreadsheet to edit records, tithes, and expenses.</p>
-                    <button class="primary-big" onclick="window.open('https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit')">✏️ EDIT SPREADSHEET</button>
-                </div>
-
-                <div id="viewer-controls" style="display:none;">
-                    <h3>Committee View</h3>
-                    <p>You have secure view-only access to all spreadsheet records.</p>
-                    <button class="secondary-big" onclick="window.open('https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/preview')">👁️ VIEW MASTER RECORDS</button>
-                </div>
-            </div>
-
-            <p class="sync-text center">Last Sync: <span id="sync-time">...</span></p>
-        </main>
-    </div>
-    <script src="script.js"></script>
-</body>
-</html>
 
 
 
