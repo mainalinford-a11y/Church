@@ -1,100 +1,209 @@
+// REPLACE THIS WITH YOUR ACTUAL GOOGLE SCRIPT DEPLOYMENT ID
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
-const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
-window.onload = () => {
-    const saved = localStorage.getItem('ackRole');
-    if (saved) { showDashboard(saved); fetchDashboardData(); }
+const CODES = { 
+    ADMIN: "TR-2026", // Treasurer Code
+    VIEW: "COM-2026"  // Committee Code
 };
 
+// Check for saved session on load
+window.onload = () => {
+    const savedRole = localStorage.getItem('ackRole');
+    if (savedRole) { 
+        showDashboard(savedRole); 
+        fetchDashboardData(); 
+    }
+};
+
+// Handle Login Logic
 function checkLogin() {
     const code = document.getElementById('pass').value;
-    let role = (code === CODES.ADMIN) ? "EDITOR" : (code === CODES.VIEW ? "VIEWER" : null);
+    let role = null;
+
+    if (code === CODES.ADMIN) role = "EDITOR";
+    else if (code === CODES.VIEW) role = "VIEWER";
+
     if (role) {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Access Denied."); }
+    } else {
+        alert("Incorrect Access Code.");
+    }
 }
 
+// UI Switcher: Login -> Dashboard
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('admin-controls').style.display = role === "EDITOR" ? 'block' : 'none';
-    document.getElementById('viewer-controls').style.display = role === "VIEWER" ? 'block' : 'none';
-    document.getElementById('user-tag').innerText = ` (${role} Mode)`;
+    
+    // Show/Hide Admin Controls based on role
+    const adminPanel = document.getElementById('admin-controls');
+    if (role === "EDITOR") {
+        adminPanel.style.display = 'block';
+    } else {
+        adminPanel.style.display = 'none';
+    }
+
+    document.getElementById('user-tag').innerText = `(${role} MODE)`;
 }
 
+// MAIN DATA SYNC FUNCTION
 async function fetchDashboardData() {
     try {
+        const syncLabel = document.getElementById('sync-time');
+        syncLabel.innerText = "Syncing...";
+
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
         
         if(data.status === "success") {
-            // 1. Weekly Finance Summary
-            document.getElementById('total-income').innerText = "KES " + data.finance.income.toLocaleString();
-            document.getElementById('total-expense').innerText = "KES " + data.finance.expense.toLocaleString();
+            // 1. UPDATE SUMMARY CARDS
+            document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
+            document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
             
-            // Handle Weekly Balance (Optional: You can add a balance ID to your HTML)
-            const balanceVal = data.finance.income - data.finance.expense;
-            const balanceEl = document.getElementById('total-balance');
-            if(balanceEl) { balanceEl.innerText = "KES " + balanceVal.toLocaleString(); }
+            // Balance Card Logic (Green if positive, Red if negative)
+            const balEl = document.getElementById('total-balance');
+            const balVal = Number(data.finance.balance);
+            balEl.innerText = "KES " + balVal.toLocaleString();
+            balEl.style.color = balVal >= 0 ? "var(--success)" : "var(--danger)";
 
-            // 2. Weekly Details Breakdown
-            document.getElementById('income-details').innerHTML = data.finance.details
-                .map(row => row[1] > 0 ? `<li>${row[0]}: <b>KES ${row[1].toLocaleString()}</b></li>` : '').join('');
-            document.getElementById('expense-details').innerHTML = data.finance.details
-                .map(row => row[3] > 0 ? `<li>${row[0]}: <b>KES ${row[3].toLocaleString()}</b></li>` : '').join('');
+            // 2. UPDATE WEEKLY BREAKDOWN LISTS
+            // Map logic: Income is in Col C (Index 2), Expense is in Col E (Index 4)
+            const incomeHtml = data.finance.details
+                .filter(row => Number(row[2]) > 0)
+                .map(row => `<li><span>${row[1]}</span> <b>${Number(row[2]).toLocaleString()}</b></li>`)
+                .join('');
+            
+            const expenseHtml = data.finance.details
+                .filter(row => Number(row[4]) > 0)
+                .map(row => `<li><span>${row[1]}</span> <b>${Number(row[4]).toLocaleString()}</b></li>`)
+                .join('');
 
-            // 3. Cell Leaderboard
-            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
+            document.getElementById('income-details').innerHTML = incomeHtml || "<li style='color:#ccc'>No income recorded</li>";
+            document.getElementById('expense-details').innerHTML = expenseHtml || "<li style='color:#ccc'>No expenses recorded</li>";
+
+            // 3. UPDATE LEADERBOARD
+            const leaderboardHtml = data.topCells.map((cell, i) => `
                 <div class="rank-row">
-                    <span><b>#${i+1}</b> ${cell[0]}</span>
+                    <span><div class="rank-badge">${i+1}</div> ${cell[0]}</span>
                     <span>KES ${Number(cell[1]).toLocaleString()}</span>
                 </div>`).join('');
+            document.getElementById('leaderboard-data').innerHTML = leaderboardHtml;
 
-            // 4. Member Register
-            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
-                <tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+            // 4. UPDATE MEMBERS TABLE
+            const membersHtml = data.members.map(m => `
+                <tr>
+                    <td><b>${m[0]}</b></td>
+                    <td>${m[1]}</td>
+                    <td>${m[2]}</td>
+                    <td>${m[3]}</td>
+                    <td>${m[4]}</td>
+                </tr>`).join('');
+            document.querySelector('#members-table tbody').innerHTML = membersHtml;
 
-            // 5. Monthly Financial Growth
-            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
+            // 5. UPDATE MONTHLY PROGRESS TABLE
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
             
             data.growth.forEach((row, i) => {
-                const bal = row[0] - row[1];
-                const balClass = bal >= 0 ? "pos-bal" : "neg-bal";
+                const inc = row[0];
+                const exp = row[1];
+                const bal = inc - exp;
+                // Use month name from array or generic label
+                const monthName = months[i] || `Period ${i+1}`; 
+                
                 growthHtml += `
                     <tr>
-                        <td><b>${months[i] || "Period " + (i+1)}</b></td>
-                        <td>KES ${row[0].toLocaleString()}</td>
-                        <td>KES ${row[1].toLocaleString()}</td>
-                        <td class="${balClass}">KES ${bal.toLocaleString()}</td>
+                        <td>${monthName}</td>
+                        <td>${Number(inc).toLocaleString()}</td>
+                        <td>${Number(exp).toLocaleString()}</td>
+                        <td class="${bal >= 0 ? 'pos-bal' : 'neg-bal'}">${Number(bal).toLocaleString()}</td>
                     </tr>`;
             });
             document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
 
-            document.getElementById('sync-time').innerText = data.lastUpdated;
+            // Update timestamp
+            syncLabel.innerText = data.lastUpdated;
+
+        } else {
+            console.error("Data Status Error:", data);
+            alert("Error loading data. Check console.");
         }
-    } catch (e) { console.error("Sync Error", e); }
+    } catch (e) {
+        console.error("Fetch Error:", e);
+        document.getElementById('sync-time').innerText = "Sync Failed";
+    }
 }
 
+// TAB SWITCHING LOGIC
 function switchTab(tabName) {
+    // Hide all tabs
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    // Remove active class from buttons
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    // Show selected tab
     document.getElementById('tab-' + tabName).classList.add('active');
+    // Highlight button (event.currentTarget works on click)
     event.currentTarget.classList.add('active');
 }
 
+// TABLE SEARCH LOGIC
 function searchTable() {
     let input = document.getElementById('memberSearch').value.toUpperCase();
     let rows = document.querySelector("#members-table tbody").rows;
     for (let i = 0; i < rows.length; i++) {
         let name = rows[i].cells[0].innerText.toUpperCase();
-        rows[i].style.display = name.indexOf(input) > -1 ? "" : "none";
+        if (name.indexOf(input) > -1) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
     }
 }
 
-function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+// ADD MEMBER LOGIC (Admin Only)
+function addMember() {
+    const name = document.getElementById('newMemName').value;
+    const cell = document.getElementById('newMemCell').value;
+    
+    if(!name || !cell) return alert("Please fill in Name and Cell Group");
+
+    // Show loading state
+    const btn = document.querySelector('.add-member-form button');
+    const originalText = btn.innerText;
+    btn.innerText = "Saving...";
+    btn.disabled = true;
+
+    fetch(WEB_APP_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: "addMember", name: name, cell: cell })
+    })
+    .then(response => response.text())
+    .then(result => {
+        alert("Member Added Successfully!");
+        document.getElementById('newMemName').value = "";
+        document.getElementById('newMemCell').selectedIndex = 0;
+        
+        // Refresh data to show new member
+        fetchDashboardData();
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Failed to add member.");
+    })
+    .finally(() => {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    });
+}
+
+// LOGOUT
+function logout() {
+    localStorage.removeItem('ackRole');
+    location.reload();
+}
 
 
 
