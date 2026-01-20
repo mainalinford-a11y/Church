@@ -36,30 +36,22 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Cards
+            // Update Summary Cards
             document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
-            const balEl = document.getElementById('total-balance');
-            balEl.innerText = "KES " + Number(data.finance.balance).toLocaleString();
-            balEl.style.color = data.finance.balance >= 0 ? "var(--success)" : "var(--danger)";
+            document.getElementById('total-balance').innerText = "KES " + Number(data.finance.balance).toLocaleString();
 
-            // Weekly Lists (Based on Col C & D mapping)
+            // Weekly Breakdown - Income (Column C / Index 2)
             document.getElementById('income-details').innerHTML = data.finance.details
-                .map(row => row[2] > 0 ? `<li>${row[1]} <b>${Number(row[2]).toLocaleString()}</b></li>` : '').join('');
+                .map(row => (Number(row[2]) > 0) ? `<li>${row[1]} <b>${Number(row[2]).toLocaleString()}</b></li>` : '')
+                .join('');
+            
+            // Weekly Breakdown - Expenditure (Column D / Index 3)
             document.getElementById('expense-details').innerHTML = data.finance.details
-                .map(row => row[3] > 0 ? `<li>${row[1]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '').join('');
+                .map(row => (Number(row[3]) > 0) ? `<li>${row[1]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '')
+                .join('');
 
-            // Leaderboard
-            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f0f0f0;">
-                    <span>#${i+1} ${cell[0]}</span><b>${Number(cell[1]).toLocaleString()}</b>
-                </div>`).join('');
-
-            // Members
-            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
-                <tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
-
-            // Monthly Progress (Fixed Column Mapping)
+            // Monthly Progress Table
             let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
             data.growth.forEach((row) => {
                 growthHtml += `<tr>
@@ -71,7 +63,7 @@ async function fetchDashboardData() {
             });
             document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Sync error:", e); }
 }
 
 function switchTab(tabName) {
@@ -90,6 +82,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
