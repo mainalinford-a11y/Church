@@ -1,81 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Church Finance Portal</title>
+    <title>ACK GITUNDU PORTAL</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
     <div id="login-container">
         <div class="card login-card">
-            <h2>Church Finance Login</h2>
-            <p>Please enter your access code</p>
-            <input type="password" id="pass" placeholder="Access Code">
-            <button onclick="checkLogin()">Enter Portal</button>
+            <h1>ACK GITUNDU PORTAL</h1>
+            <p>Authorized Access Only</p>
+            <input type="password" id="pass" placeholder="Enter Access Code">
+            <button onclick="checkLogin()">Login</button>
         </div>
     </div>
 
     <div id="dashboard" style="display:none;">
         <header>
             <div class="header-content">
-                <h1>Church Finance Portal</h1>
+                <h2>ACK GITUNDU PORTAL</h2>
                 <div id="user-status"></div>
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
         </header>
 
         <div class="main-content">
+            <div class="card wide leaderboard-card">
+                <h3>🏆 Current Top Cells (Annual)</h3>
+                <div id="leaderboard-data">Loading rankings...</div>
+                <p class="sync-text">Last Sync: <span id="sync-time">...</span></p>
+            </div>
+
             <div class="grid edit-only">
                 <div class="card">
-                    <h3>➕ Add New Member</h3>
+                    <h3>➕ New Member</h3>
                     <input type="text" id="mName" placeholder="Full Name">
                     <select id="mCell">
-                        <option>Samaria</option>
-                        <option>Jerusalem</option>
-                        <option>Bethlehem</option>
-                        <option>Emmaus</option>
-                        <option>Nazareth</option>
-                        <option>Galilee</option>
+                        <option>Samaria</option><option>Jerusalem</option>
+                        <option>Bethlehem</option><option>Emmaus</option>
+                        <option>Nazareth</option><option>Galilee</option>
                     </select>
-                    <button onclick="apiCall('addMember')">Save to Members Sheet</button>
+                    <button onclick="apiCall('addMember')">Add Member</button>
                 </div>
 
                 <div class="card">
-                    <h3>📈 New Income/Expense Stream</h3>
-                    <p>Adds a new row to the Weekly Finance ledger.</p>
-                    <input type="text" id="streamName" placeholder="e.g., Special Project Fund">
-                    <button onclick="apiCall('addStream')">Add Row to Finance</button>
+                    <h3>📈 Setup Category</h3>
+                    <input type="text" id="streamName" placeholder="e.g. Building Fund">
+                    <button onclick="apiCall('addStream')">Create Category Row</button>
                 </div>
             </div>
 
             <div class="card edit-only wide">
-                <h3>💰 Quick Sunday Giving Entry</h3>
+                <h3>💰 Sunday Giving Entry</h3>
                 <div class="input-row">
                     <input type="date" id="gDate">
-                    <input type="text" id="gName" placeholder="Member Name">
+                    <input type="text" id="gName" placeholder="Type Member Name">
+                    <select id="gCell">
+                        <option>Samaria</option><option>Jerusalem</option>
+                        <option>Bethlehem</option><option>Emmaus</option>
+                        <option>Nazareth</option><option>Galilee</option>
+                    </select>
                     <input type="number" id="gTithe" placeholder="Tithe">
                     <input type="number" id="gPledge" placeholder="Pledge">
+                    <input type="number" id="gThanks" placeholder="Thanksgiving">
                 </div>
                 <button onclick="apiCall('submitGiving')">Update Ledger</button>
             </div>
 
             <div class="card wide">
-                <h3>📊 Financial Reports & Leaderboards</h3>
-                <p>Access the live spreadsheets and cell analytics below.</p>
-                <div class="button-group">
-                    <button class="secondary"
-                        onclick="window.open('https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit?gid=1815679178#gid=1815679178')">Open
-                        Full
-                        Spreadsheet</button>
-                </div>
+                <button class="secondary" onclick="window.open('https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit')">Open Full Spreadsheet</button>
             </div>
         </div>
     </div>
     <script src="script.js"></script>
 </body>
-
-
 </html>
