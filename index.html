@@ -1,104 +1,93 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ST MARKS ACK GITUNDU - Portal</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-</head>
-<body>
+// --- CONFIGURATION ---
+const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
+const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
-    <div class="login-container" id="login-container">
-        <div class="login-box">
-            <h2><i class="fas fa-church"></i> ST MARKS ACK GITUNDU</h2>
-            <p>Executive Dashboard Access</p>
-            <input type="password" id="pass" placeholder="Enter Access Code">
-            <button onclick="checkLogin()">Enter Portal</button>
-        </div>
-    </div>
+// --- SYSTEM LOGIC ---
+window.onload = () => {
+    const saved = localStorage.getItem('ackRole');
+    if (saved) { showDashboard(saved); fetchDashboardData(); }
+};
 
-    <div class="dashboard" id="dashboard">
-        <header>
-            <div class="header-title">
-                <h1>ST MARKS ACK GITUNDU</h1>
-                <span id="user-tag"></span>
-            </div>
-            <button class="logout-btn" onclick="logout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
-        </header>
+function checkLogin() {
+    const code = document.getElementById('pass').value;
+    let role = (code === CODES.ADMIN) ? "EDITOR" : (code === CODES.VIEW ? "VIEWER" : null);
+    if (role) {
+        localStorage.setItem('ackRole', role);
+        showDashboard(role);
+        fetchDashboardData();
+    } else { alert("Access Denied."); }
+}
 
-        <nav class="tabs">
-            <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
-            <button class="tab-btn" onclick="switchTab('spreadsheet')">Live Spreadsheet</button>
-            <button class="tab-btn" onclick="switchTab('analytics')">Monthly Progress</button>
-            <button class="tab-btn" onclick="switchTab('members')">Members</button>
-        </nav>
+function showDashboard(role) {
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('user-tag').innerText = `(${role} MODE)`;
 
-        <div id="tab-overview" class="tab-content active">
-            <div class="summary-cards">
-                <div class="card">
-                    <h3>Total Income</h3>
-                    <div class="number" id="total-income">...</div>
-                </div>
-                <div class="card">
-                    <h3>Total Expenditure</h3>
-                    <div class="number" id="total-expense">...</div>
-                </div>
-                <div class="card balance-card">
-                    <h3>Net Balance</h3>
-                    <div class="number" id="total-balance">...</div>
-                </div>
-            </div>
+    // Embedded Spreadsheet Logic
+    const container = document.getElementById('spreadsheet-container');
+    let sheetUrl = "";
+    if (role === "EDITOR") {
+        sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit?rm=minimal`;
+    } else {
+        sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/preview?rm=minimal`;
+    }
+    container.innerHTML = `<iframe src="${sheetUrl}"></iframe>`;
+}
 
-            <div class="grid-container">
-                <div class="panel">
-                    <h3>Weekly Financial Breakdown</h3>
-                    <div class="breakdown-lists">
-                        <div class="list-col">
-                            <h4 style="color:#2980b9">Income Details</h4>
-                            <ul id="income-details" class="detail-list"></ul>
-                        </div>
-                        <div class="list-col" style="border-left: 1px solid #eee; padding-left: 15px;">
-                            <h4 style="color:#c0392b">Expense Details</h4>
-                            <ul id="expense-details" class="detail-list"></ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="panel">
-                    <h3>Cell Leaderboard</h3>
-                    <div id="leaderboard-data"></div>
-                </div>
-            </div>
-        </div>
+async function fetchDashboardData() {
+    try {
+        const response = await fetch(WEB_APP_URL);
+        const data = await response.json();
+        if(data.status === "success") {
+            // Summary Cards
+            document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
+            document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
+            document.getElementById('total-balance').innerText = "KES " + Number(data.finance.balance).toLocaleString();
+            
+            // Weekly Details (Income Index 1, Exp Index 3)
+            document.getElementById('income-details').innerHTML = data.finance.details
+                .map(row => row[1] > 0 ? `<li>${row[0]} <b>${Number(row[1]).toLocaleString()}</b></li>` : '').join('');
+            document.getElementById('expense-details').innerHTML = data.finance.details
+                .map(row => row[3] > 0 ? `<li>${row[0]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '').join('');
 
-        <div id="tab-spreadsheet" class="tab-content">
-            <div class="panel" style="height: 80vh; padding: 0; overflow: hidden; position: relative;">
-                <div id="spreadsheet-container" style="height: 100%; width: 100%;">
-                    </div>
-            </div>
-        </div>
+            // Leaderboard
+            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
+                <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee;">
+                    <span>#${i+1} ${cell[0]}</span><span>${Number(cell[1]).toLocaleString()}</span>
+                </div>`).join('');
 
-        <div id="tab-analytics" class="tab-content">
-            <div class="panel">
-                <h3>Annual Financial Summary</h3>
-                <div id="growth-chart-data"></div>
-            </div>
-        </div>
+            // Members Table
+            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
+                <tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-        <div id="tab-members" class="tab-content">
-            <div class="search-bar">
-                <input type="text" id="memberSearch" onkeyup="searchTable()" placeholder="Search members...">
-            </div>
-            <table class="data-table" id="members-table">
-                <thead><tr><th>Name</th><th>No.</th><th>Cell</th><th>Type</th><th>Notes</th></tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
+            // Monthly Progress (Fixed Column Mapping)
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
+            data.growth.forEach((row, i) => {
+                growthHtml += `<tr><td><b>${months[i] || 'M'+(i+1)}</b></td><td>${row.inc.toLocaleString()}</td><td>${row.exp.toLocaleString()}</td><td class="${row.bal >= 0 ? 'pos-bal' : 'neg-bal'}">${row.bal.toLocaleString()}</td></tr>`;
+            });
+            document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
+        }
+    } catch (e) { console.error("Sync Error", e); }
+}
 
-    <script src="script.js"></script>
-</body>
-</html>
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+function searchTable() {
+    let input = document.getElementById('memberSearch').value.toUpperCase();
+    let rows = document.querySelector("#members-table tbody").rows;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none";
+    }
+}
+
+function logout() { localStorage.removeItem('ackRole'); location.reload(); }
 
 
 
