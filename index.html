@@ -62,6 +62,85 @@
                 <div class="card balance-card">
                     <div class="card-icon balance-icon"><i class="fas fa-wallet"></i></div>
                     <h3>Net Balance</h3>
+                    <div class="number" id="total-balance">...</div>
+                    <div class="trend">Cash at Hand</div>
+                </div>
+            </div>
+
+            <div class="grid-container">
+                <div class="panel">
+                    <h3><i class="fas fa-list-ul"></i> Weekly Financial Breakdown</h3>
+                    <div class="breakdown-lists">
+                        <div class="list-col">
+                            <h4 class="inc-title">Income Sources</h4>
+                            <ul id="income-details" class="detail-list"></ul>
+                        </div>
+                        <div class="list-col border-left">
+                            <h4 class="exp-title">Expenditure</h4>
+                            <ul id="expense-details" class="detail-list"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3><i class="fas fa-trophy"></i> Cell Leaderboard</h3>
+                    <div id="leaderboard-data" class="leaderboard-container"></div>
+                </div>
+            </div>
+
+            <div id="admin-controls" class="admin-panel" style="display:none;">
+                <h3><i class="fas fa-user-plus"></i> Add New Member</h3>
+                <div class="add-member-form">
+                    <input type="text" id="newMemName" placeholder="Full Name">
+                    <select id="newMemCell">
+                        <option value="" disabled selected>Select Cell Group</option>
+                        <option value="Samaria">Samaria</option>
+                        <option value="Jerusalem">Jerusalem</option>
+                        <option value="Bethany">Bethany</option>
+                        <option value="Galilee">Galilee</option>
+                        <option value="Jericho">Jericho</option>
+                        <option value="Bethlehem">Bethlehem</option>
+                        <option value="Damascus">Damascus</option>
+                        <option value="Jordan">Jordan</option>
+                    </select>
+                    <button onclick="addMember()">Save Member</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-members" class="tab-content">
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="memberSearch" onkeyup="searchTable()" placeholder="Search member by name...">
+            </div>
+            <div class="table-responsive">
+                <table class="data-table" id="members-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Number</th>
+                            <th>Cell Group</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-analytics" class="tab-content">
+            <div class="panel">
+                <h3><i class="fas fa-calendar-alt"></i> Annual Financial Summary</h3>
+                <div id="growth-chart-data" class="growth-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
 
 
 
