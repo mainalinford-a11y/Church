@@ -1,6 +1,9 @@
-const WEB_APP_URL = "YOUR_NEW_DEPLOYMENT_URL_HERE"; 
+// --- CONFIGURATION ---
+const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
+// --- APP LOGIC ---
 window.onload = () => {
     const saved = localStorage.getItem('ackRole');
     if (saved) { showDashboard(saved); fetchDashboardData(); }
@@ -13,69 +16,72 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Access Denied."); }
+    } else { alert("Access Denied. Please check your code."); }
 }
 
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('admin-controls').style.display = role === "EDITOR" ? 'block' : 'none';
-    document.getElementById('viewer-controls').style.display = role === "VIEWER" ? 'block' : 'none';
-    document.getElementById('user-tag').innerText = ` (${role} Mode)`;
+    document.getElementById('user-tag').innerText = `(${role} MODE)`;
+
+    // Handle Spreadsheet Embedding Permission
+    const container = document.getElementById('spreadsheet-container');
+    let sheetUrl = "";
+    if (role === "EDITOR") {
+        // Full Edit Access for Treasurer
+        sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit?rm=minimal`;
+    } else {
+        // Read-Only Preview for Committee
+        sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/preview?rm=minimal`;
+    }
+    container.innerHTML = `<iframe src="${sheetUrl}"></iframe>`;
 }
 
 async function fetchDashboardData() {
     try {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
-        
         if(data.status === "success") {
-            // 1. Weekly Finance Summary
-            document.getElementById('total-income').innerText = "KES " + data.finance.income.toLocaleString();
-            document.getElementById('total-expense').innerText = "KES " + data.finance.expense.toLocaleString();
+            // Update Summary Cards
+            document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
+            document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
             
-            // Handle Weekly Balance (Optional: You can add a balance ID to your HTML)
-            const balanceVal = data.finance.income - data.finance.expense;
-            const balanceEl = document.getElementById('total-balance');
-            if(balanceEl) { balanceEl.innerText = "KES " + balanceVal.toLocaleString(); }
+            const balVal = Number(data.finance.balance);
+            const balEl = document.getElementById('total-balance');
+            balEl.innerText = "KES " + balVal.toLocaleString();
+            balEl.style.color = balVal >= 0 ? "var(--success)" : "var(--danger)";
 
-            // 2. Weekly Details Breakdown
+            // Weekly Breakdown (Inc: Index 1, Exp: Index 3 based on Code.gs)
             document.getElementById('income-details').innerHTML = data.finance.details
-                .map(row => row[1] > 0 ? `<li>${row[0]}: <b>KES ${row[1].toLocaleString()}</b></li>` : '').join('');
+                .map(row => row[1] > 0 ? `<li>${row[0]} <b>${Number(row[1]).toLocaleString()}</b></li>` : '').join('');
+            
             document.getElementById('expense-details').innerHTML = data.finance.details
-                .map(row => row[3] > 0 ? `<li>${row[0]}: <b>KES ${row[3].toLocaleString()}</b></li>` : '').join('');
+                .map(row => row[3] > 0 ? `<li>${row[0]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '').join('');
 
-            // 3. Cell Leaderboard
+            // Leaderboard
             document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
-                <div class="rank-row">
-                    <span><b>#${i+1}</b> ${cell[0]}</span>
-                    <span>KES ${Number(cell[1]).toLocaleString()}</span>
+                <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                    <span><b>#${i+1}</b> ${cell[0]}</span><span>${Number(cell[1]).toLocaleString()}</span>
                 </div>`).join('');
 
-            // 4. Member Register
+            // Members Table
             document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
-                <tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+                <tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // 5. Monthly Financial Growth
-            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            // Monthly Progress (Proper Mapping)
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
-            
             data.growth.forEach((row, i) => {
-                const bal = row[0] - row[1];
-                const balClass = bal >= 0 ? "pos-bal" : "neg-bal";
-                growthHtml += `
-                    <tr>
-                        <td><b>${months[i] || "Period " + (i+1)}</b></td>
-                        <td>KES ${row[0].toLocaleString()}</td>
-                        <td>KES ${row[1].toLocaleString()}</td>
-                        <td class="${balClass}">KES ${bal.toLocaleString()}</td>
-                    </tr>`;
+                growthHtml += `<tr>
+                    <td><b>${months[i] || 'M'+(i+1)}</b></td>
+                    <td>${row.inc.toLocaleString()}</td>
+                    <td>${row.exp.toLocaleString()}</td>
+                    <td class="${row.bal >= 0 ? 'pos-bal' : 'neg-bal'}">${row.bal.toLocaleString()}</td>
+                </tr>`;
             });
             document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
-
-            document.getElementById('sync-time').innerText = data.lastUpdated;
         }
-    } catch (e) { console.error("Sync Error", e); }
+    } catch (e) { console.error("Data Sync Error:", e); }
 }
 
 function switchTab(tabName) {
@@ -89,12 +95,12 @@ function searchTable() {
     let input = document.getElementById('memberSearch').value.toUpperCase();
     let rows = document.querySelector("#members-table tbody").rows;
     for (let i = 0; i < rows.length; i++) {
-        let name = rows[i].cells[0].innerText.toUpperCase();
-        rows[i].style.display = name.indexOf(input) > -1 ? "" : "none";
+        rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none";
     }
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
