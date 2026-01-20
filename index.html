@@ -10,7 +10,6 @@
     <div id="login-container">
         <div class="card login-card">
             <h1>ACK GITUNDU PORTAL</h1>
-            <p>Authorized Access Only</p>
             <input type="password" id="pass" placeholder="Enter Access Code">
             <button onclick="checkLogin()">Login</button>
         </div>
@@ -18,61 +17,69 @@
 
     <div id="dashboard" style="display:none;">
         <header>
-            <div class="header-content">
-                <h2>ACK GITUNDU PORTAL</h2>
-                <div id="user-status"></div>
+            <div class="header-nav">
+                <h2>ACK GITUNDU</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('summary')">Summary</button>
+                    <button class="tab-btn" onclick="switchTab('members')">Members</button>
+                    <button class="tab-btn" onclick="switchTab('giving')">Giving History</button>
+                </div>
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
         </header>
 
-        <div class="main-content">
-            <div class="card wide leaderboard-card">
-                <h3>🏆 Current Top Cells (Annual)</h3>
-                <div id="leaderboard-data">Loading rankings...</div>
-                <p class="sync-text">Last Sync: <span id="sync-time">...</span></p>
-            </div>
-
-            <div class="grid edit-only">
-                <div class="card">
-                    <h3>➕ New Member</h3>
-                    <input type="text" id="mName" placeholder="Full Name">
-                    <select id="mCell">
-                        <option>Samaria</option><option>Jerusalem</option>
-                        <option>Bethlehem</option><option>Emmaus</option>
-                        <option>Nazareth</option><option>Galilee</option>
-                    </select>
-                    <button onclick="apiCall('addMember')">Add Member</button>
+        <main class="main-content">
+            <div id="tab-summary" class="tab-content active">
+                <div class="grid">
+                    <div class="card finance-card income">
+                        <h3>Last Week Income</h3>
+                        <h2 id="total-income">KES 0.00</h2>
+                    </div>
+                    <div class="card finance-card expense">
+                        <h3>Last Week Expenses</h3>
+                        <h2 id="total-expense">KES 0.00</h2>
+                    </div>
                 </div>
-
-                <div class="card">
-                    <h3>📈 Setup Category</h3>
-                    <input type="text" id="streamName" placeholder="e.g. Building Fund">
-                    <button onclick="apiCall('addStream')">Create Category Row</button>
+                <div class="card wide">
+                    <h3>🏆 Annual Cell Rankings</h3>
+                    <div id="leaderboard-data"></div>
                 </div>
             </div>
 
-            <div class="card edit-only wide">
-                <h3>💰 Sunday Giving Entry</h3>
-                <div class="input-row">
-                    <input type="date" id="gDate">
-                    <input type="text" id="gName" placeholder="Type Member Name">
-                    <select id="gCell">
-                        <option>Samaria</option><option>Jerusalem</option>
-                        <option>Bethlehem</option><option>Emmaus</option>
-                        <option>Nazareth</option><option>Galilee</option>
-                    </select>
-                    <input type="number" id="gTithe" placeholder="Tithe">
-                    <input type="number" id="gPledge" placeholder="Pledge">
-                    <input type="number" id="gThanks" placeholder="Thanksgiving">
+            <div id="tab-members" class="tab-content">
+                <div class="card wide">
+                    <div class="table-header">
+                        <h3>👥 Church Register</h3>
+                        <input type="text" id="memberSearch" placeholder="Search name..." onkeyup="searchTable('members-table', 0)">
+                    </div>
+                    <div class="table-container">
+                        <table id="members-table">
+                            <thead><tr><th>Name</th><th>ID</th><th>Cell</th><th>Role</th><th>Contact</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>
-                <button onclick="apiCall('submitGiving')">Update Ledger</button>
             </div>
 
-            <div class="card wide">
-                <button class="secondary" onclick="window.open('https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit')">Open Full Spreadsheet</button>
+            <div id="tab-giving" class="tab-content">
+                <div class="card wide">
+                    <h3>💰 Recent Giving History</h3>
+                    <div class="table-container">
+                        <table id="giving-table">
+                            <thead><tr><th>Date</th><th>Name</th><th>Cell</th><th>Tithe</th><th>Pledge</th><th>Total</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <div class="card wide center">
+                <button class="primary-big" onclick="window.open('https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit')">✏️ OPEN SPREADSHEET TO UPDATE</button>
+                <p class="sync-text">System Synced: <span id="sync-time">...</span></p>
+            </div>
+        </main>
     </div>
     <script src="script.js"></script>
 </body>
 </html>
+
