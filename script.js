@@ -18,13 +18,12 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Access Denied."); }
+    } else { alert("Incorrect Access Code."); }
 }
 
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('user-tag').innerText = `(${role} MODE)`;
     const container = document.getElementById('spreadsheet-container');
     let mode = (role === "EDITOR") ? "edit" : "preview";
     container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
@@ -36,31 +35,36 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Cards
+            // Annual Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
             const balEl = document.getElementById('total-balance');
             balEl.innerText = "KES " + bal.toLocaleString();
-            balEl.style.color = bal >= 0 ? "green" : "red";
+            balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly Nav
+            // Weekly History
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(b) - new Date(a));
             currentWeekIndex = 0;
             updateWeeklyDisplay();
 
-            // Tables
-            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((c, i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;"><span>#${i+1} ${c[0]}</span><b>${Number(c[1]).toLocaleString()}</b></div>`).join('');
-            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+            // Members: Quick View (10) vs Full List
+            const members = data.members;
+            document.querySelector('#quick-member-table tbody').innerHTML = members.slice(0, 10)
+                .map(m => `<tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[3]}</td></tr>`).join('');
             
-            let gHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
+            document.querySelector('#members-table tbody').innerHTML = members
+                .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+            
+            // Monthly Growth Table
+            let gHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
-                gHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}"><b>${Number(r.bal).toLocaleString()}</b></td></tr>`;
+                gHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
             });
             document.getElementById('growth-chart-data').innerHTML = gHtml + "</tbody></table>";
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Sync Error:", e); }
 }
 
 function updateWeeklyDisplay() {
@@ -76,7 +80,7 @@ function updateWeeklyDisplay() {
     let expHtml = weekData.expense.map(e => `<li>${e.name} <span>${e.amount.toLocaleString()}</span></li>`).join('');
     expHtml += `<li class="total-row">TOTAL EXPENDITURE <span>${(weekData.totals.exp || 0).toLocaleString()}</span></li>`;
     const wBal = weekData.totals.bal || 0;
-    expHtml += `<li style="color:${wBal >= 0 ? 'green' : 'red'}; font-weight:bold;">WEEKLY BALANCE <span>${wBal.toLocaleString()}</span></li>`;
+    expHtml += `<li style="color:${wBal >= 0 ? 'green' : 'red'}; font-weight:bold; border:none;">WEEKLY BALANCE <span>${wBal.toLocaleString()}</span></li>`;
     document.getElementById('expense-details').innerHTML = expHtml;
 }
 
@@ -87,10 +91,11 @@ function changeWeek(dir) {
     updateWeeklyDisplay();
 }
 
-function switchTab(t) {
-    document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-' + t).classList.add('active');
-    event.currentTarget.classList.add('active');
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-content'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabId).classList.add('active-content');
+    btn.classList.add('active');
 }
 
 function searchTable() {
@@ -102,6 +107,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
