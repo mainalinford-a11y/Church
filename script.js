@@ -18,7 +18,7 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Incorrect Access Code."); }
+    } else { alert("Incorrect code."); }
 }
 
 function showDashboard(role) {
@@ -43,28 +43,28 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly History
+            // Weekly Navigation
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(b) - new Date(a));
             currentWeekIndex = 0;
             updateWeeklyDisplay();
 
-            // Members: Quick View (10) vs Full List
+            // Members: Populate Quick View (Overview) and Full List (Members Tab)
             const members = data.members;
-            document.querySelector('#quick-member-table tbody').innerHTML = members.slice(0, 10)
+            document.querySelector('#quick-member-table tbody').innerHTML = members.slice(-10).reverse()
                 .map(m => `<tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[3]}</td></tr>`).join('');
             
             document.querySelector('#members-table tbody').innerHTML = members
                 .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
-            
-            // Monthly Growth Table
-            let gHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Balance</th></tr></thead><tbody>";
+
+            // Monthly Progress (Now in its own tab)
+            let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
-                gHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
+                mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
             });
-            document.getElementById('growth-chart-data').innerHTML = gHtml + "</tbody></table>";
+            document.getElementById('monthly-table-data').innerHTML = mHtml + "</tbody></table>";
         }
-    } catch (e) { console.error("Sync Error:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function updateWeeklyDisplay() {
@@ -91,10 +91,10 @@ function changeWeek(dir) {
     updateWeeklyDisplay();
 }
 
-function switchTab(tabId, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-content'));
+function switchTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active-content'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + tabId).classList.add('active-content');
+    document.getElementById('tab-' + id).classList.add('active-content');
     btn.classList.add('active');
 }
 
@@ -107,6 +107,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
