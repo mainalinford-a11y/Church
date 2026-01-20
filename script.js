@@ -1,11 +1,11 @@
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
- const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
+const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
 let weeklyDataGrouped = {};
 let weekKeys = [];
 let currentWeekIndex = 0;
-let rawMemberGiving = []; // To store giving data for analytics
+let rawMemberGiving = []; 
 
 window.onload = () => {
     const saved = localStorage.getItem('ackRole');
@@ -36,7 +36,7 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Annual Summary Cards
+            // Annual Summary Cards from your Annual Records sheet
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -44,20 +44,20 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Store Giving Data for Weekly Analytics
+            // Store the Member Giving records for the analytics section
             rawMemberGiving = data.memberGiving || [];
 
-            // Weekly History - Sort chronologically
+            // Sort weeks starting from Jan 04 2026
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
             currentWeekIndex = 0; 
             updateWeeklyDisplay();
 
-            // Full Member List
+            // Full Member Directory
             document.querySelector('#members-table tbody').innerHTML = data.members
                 .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Tab
+            // Monthly Progress Data
             let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
                 mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
@@ -75,7 +75,7 @@ function updateWeeklyDisplay() {
 
     const cleanNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0;
 
-    // 1. Process INCOME for the cards
+    // 1. Calculate and Display Income Items
     let calcIncomeTotal = 0;
     let incHtml = weekData.income
         .filter(i => i.name && !i.name.toUpperCase().includes("TOTAL") && cleanNum(i.amount) > 0)
@@ -88,15 +88,17 @@ function updateWeeklyDisplay() {
     document.getElementById('income-details').innerHTML = incHtml + 
         `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
 
-    // 2. Process WEEKLY CELL ANALYTICS (Godly Competition)
-    // We filter the raw giving data by the currently selected Week Ending date
+    // 2. Weekly Cell Analytics (The Godly Competition)
+    // Matches Column A (Date) and Column C (Cell Group) from your Member Giving sheet
     let cellRankings = {};
     rawMemberGiving.forEach(record => {
-        // record[0] = Date, record[1] = Cell Name, record[2] = Amount
+        // Date check (Column A must match selected week)
         if (record[0] === dateKey) {
-            let cellName = record[1] || "Unknown Cell";
-            let amount = cleanNum(record[2]);
-            cellRankings[cellName] = (cellRankings[cellName] || 0) + amount;
+            let cellName = record[1]; // Column C: Samaria, Bethlehem, etc.
+            let amount = cleanNum(record[2]); // Column G: Total Giving
+            if (cellName) {
+                cellRankings[cellName] = (cellRankings[cellName] || 0) + amount;
+            }
         }
     });
 
@@ -105,17 +107,17 @@ function updateWeeklyDisplay() {
     if (sortedCells.length > 0) {
         document.getElementById('cell-analytics-data').innerHTML = sortedCells
             .map((c, i) => {
-                let trophy = i === 0 ? " 🏆" : ""; // Trophy for the winner
+                let medal = i === 0 ? "🥇" : (i === 1 ? "🥈" : (i === 2 ? "🥉" : ""));
                 return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
-                    <span><b>${i+1}. ${c[0]}${trophy}</b></span>
+                    <span><b>${i+1}. ${c[0]} ${medal}</b></span>
                     <span>KES ${c[1].toLocaleString()}</span>
                 </div>`;
             }).join('');
     } else {
-        document.getElementById('cell-analytics-data').innerHTML = "<p style='color:#7f8c8d; text-align:center;'>No Cell Giving recorded for this week.</p>";
+        document.getElementById('cell-analytics-data').innerHTML = "<p style='color:#7f8c8d; text-align:center;'>No Cell Giving recorded for " + dateKey + "</p>";
     }
 
-    // 3. Process EXPENDITURE
+    // 3. Calculate and Display Expenditure Items
     let calcExpenseTotal = 0;
     let expHtml = weekData.expense
         .filter(e => e.name && !e.name.toUpperCase().includes("TOTAL") && cleanNum(e.amount) > 0)
@@ -161,6 +163,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
