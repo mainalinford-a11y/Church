@@ -101,23 +101,60 @@ function updateWeeklyDisplay() {
     }
     const dateStr = weekKeys[currentWeekIndex];
     const week = weeklyDataGrouped[dateStr];
-    document.getElementById('week-label').innerText = new Date(dateStr).toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'});
+    
+    // 1. Format Date Label
+    const dateObj = new Date(dateStr);
+    document.getElementById('week-label').innerText = dateObj.toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric'
+    });
 
     const clean = (v) => parseFloat(String(v).replace(/,/g, '')) || 0;
     let incT = 0, expT = 0;
     
+    // 2. Weekly Income with Totals
     let incH = week.income.filter(i => i.name && !i.name.toUpperCase().includes("TOTAL") && clean(i.amount) > 0).map(i => {
         incT += clean(i.amount);
         return `<li>${i.name} <span>${clean(i.amount).toLocaleString()}</span></li>`;
     }).join('');
     
+    // 3. Weekly Expenditure with Totals
     let expH = week.expense.filter(e => e.name && !e.name.toUpperCase().includes("TOTAL") && clean(e.amount) > 0).map(e => {
         expT += clean(e.amount);
         return `<li>${e.name} <span>${clean(e.amount).toLocaleString()}</span></li>`;
     }).join('');
 
-    document.getElementById('income-details').innerHTML = (incH || "<li>No income recorded</li>") + `<li class="total-row">TOTAL <span>${incT.toLocaleString()}</span></li>`;
-    document.getElementById('expense-details').innerHTML = (expH || "<li>No expense recorded</li>") + `<li class="total-row">TOTAL <span>${expT.toLocaleString()}</span></li>`;
+    // 4. Calculate Weekly Balance
+    const weeklyBal = incT - expT;
+
+    document.getElementById('income-details').innerHTML = (incH || "<li>No income recorded</li>") + 
+        `<li class="total-row">TOTAL INCOME <span>${incT.toLocaleString()}</span></li>`;
+    
+    document.getElementById('expense-details').innerHTML = (expH || "<li>No expense recorded</li>") + 
+        `<li class="total-row">TOTAL EXPENDITURE <span>${expT.toLocaleString()}</span></li>` +
+        `<li style="color:${weeklyBal >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:bold; border:none; margin-top:10px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBal.toLocaleString()}</span></li>`;
+
+    // 5. RESTORE CELL GROUP ANALYTICS
+    let cells = {};
+    const targetTime = new Date(dateStr).setHours(0,0,0,0);
+    
+    rawMemberGiving.forEach(r => {
+        const recordDate = new Date(r[0]);
+        if (recordDate.setHours(0,0,0,0) === targetTime) {
+            let cellName = r[1] || "Unassigned";
+            let amount = clean(r[2]);
+            cells[cellName] = (cells[cellName] || 0) + amount;
+        }
+    });
+
+    const sorted = Object.entries(cells).sort((a,b) => b[1] - a[1]);
+    
+    document.getElementById('cell-analytics-data').innerHTML = sorted.length > 0 ? sorted.map((c, i) => {
+        let medal = i === 0 ? "🥇" : (i === 1 ? "🥈" : (i === 2 ? "🥉" : ""));
+        return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
+            <span><b>${i+1}. ${c[0]}</b> ${medal}</span>
+            <span>KES ${c[1].toLocaleString()}</span>
+        </div>`;
+    }).join('') : "<p style='text-align:center; color:#7f8c8d;'>No cell group data for this week.</p>";
 }
 
 // 6. STATEMENT FEATURE
@@ -160,6 +197,7 @@ function searchTable() {
         rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
     }
 }
+
 
 
 
