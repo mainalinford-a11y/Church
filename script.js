@@ -1,6 +1,3 @@
- * ACK GITUNDU - STABLE VERSION
- */
-
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
@@ -147,6 +144,7 @@ function searchTable() {
         rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
     }
 }
+
 
 
 
