@@ -16,19 +16,21 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Access Denied"); }
+    } else { alert("Access Denied. Please check your code."); }
 }
 
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     
-    // Security: Only show spreadsheet link for the Treasurer
     if (role === "EDITOR") {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
-        document.getElementById('user-tag').innerText = " (Treasurer)";
+        document.getElementById('admin-controls').style.display = 'block';
+        document.getElementById('viewer-controls').style.display = 'none';
+        document.getElementById('user-tag').innerText = " (Treasurer Mode)";
     } else {
-        document.getElementById('user-tag').innerText = " (Committee)";
+        document.getElementById('viewer-controls').style.display = 'block';
+        document.getElementById('admin-controls').style.display = 'none';
+        document.getElementById('user-tag').innerText = " (Committee Mode)";
     }
 }
 
@@ -38,15 +40,15 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // 1. Finance Summaries
-            document.getElementById('total-income').innerText = "KES " + data.finance.income.toLocaleString();
-            document.getElementById('total-expense').innerText = "KES " + data.finance.expense.toLocaleString();
+            // 1. Finance Summary
+            document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
+            document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
             
-            // 2. Breakdowns
+            // 2. Weekly Breakdowns
             let incHtml = data.finance.details.map(row => row[1] > 0 ? `<li>${row[0]}: <b>KES ${row[1].toLocaleString()}</b></li>` : '').join('');
             let expHtml = data.finance.details.map(row => row[3] > 0 ? `<li>${row[0]}: <b>KES ${row[3].toLocaleString()}</b></li>` : '').join('');
-            document.getElementById('income-details').innerHTML = incHtml || "<li>No specific entries.</li>";
-            document.getElementById('expense-details').innerHTML = expHtml || "<li>No specific entries.</li>";
+            document.getElementById('income-details').innerHTML = incHtml || "<li>No specific income entries.</li>";
+            document.getElementById('expense-details').innerHTML = expHtml || "<li>No specific expense entries.</li>";
 
             // 3. Leaderboard
             document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
@@ -59,25 +61,38 @@ async function fetchDashboardData() {
             document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
                 <tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // 5. Monthly Growth Table
+            // 5. Monthly Growth Table with Balance Fix
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Expense</th></tr></thead><tbody>";
+            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
+            
             data.growth.forEach((row, i) => {
+                // row[0]=Income, row[1]=Expense, row[2]=Balance
                 if (row[0] > 0 || row[1] > 0) {
-                    growthHtml += `<tr><td>${months[i]}</td><td>KES ${row[0].toLocaleString()}</td><td>KES ${row[1].toLocaleString()}</td></tr>`;
+                    const balanceClass = row[2] >= 0 ? "pos-bal" : "neg-bal";
+                    growthHtml += `
+                        <tr>
+                            <td><b>${months[i]}</b></td>
+                            <td>KES ${row[0].toLocaleString()}</td>
+                            <td>KES ${row[1].toLocaleString()}</td>
+                            <td class="${balanceClass}">KES ${row[2].toLocaleString()}</td>
+                        </tr>`;
                 }
             });
             document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
 
             document.getElementById('sync-time').innerText = data.lastUpdated;
         }
-    } catch (e) { console.error("Sync Error", e); }
+    } catch (e) { 
+        console.error("Sync Error", e);
+        document.getElementById('sync-time').innerText = "Connection Failed";
+    }
 }
 
 function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tab-' + tabName).classList.add('active');
+    // Highlight the button
     event.currentTarget.classList.add('active');
 }
 
@@ -96,4 +111,5 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
