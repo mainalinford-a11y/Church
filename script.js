@@ -1,3 +1,8 @@
+ /**
+ * ACK GITUNDU MANAGEMENT SYSTEM - FRONTEND
+ * Features: Dashboard, Weekly History (No Phantoms), Member Giving Automation, & Individual Statements
+ */
+
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
@@ -35,7 +40,7 @@ async function fetchDashboardData() {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
         if(data.status === "success") {
-            // Annual Cards
+            // Update Annual Summary Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -46,35 +51,41 @@ async function fetchDashboardData() {
             rawMemberGiving = data.memberGiving || [];
             weeklyDataGrouped = data.weeklyHistory;
             
-            // --- UPDATED FILTERING LOGIC ---
-            // Only keep weeks that are in the year 2026 or later
+            // Filter keys for 2026 and sort chronologically
             weekKeys = Object.keys(weeklyDataGrouped)
-                .filter(dateStr => {
-                    const d = new Date(dateStr);
-                    return d.getFullYear() >= 2026; 
-                })
+                .filter(dateStr => new Date(dateStr).getFullYear() >= 2026)
                 .sort((a,b) => new Date(a) - new Date(b));
-            // -------------------------------
-
-            // Start at index 0 (the first Sunday of January 2026)
-            currentWeekIndex = 0; 
+            
+            currentWeekIndex = weekKeys.length - 1; 
             updateWeeklyDisplay();
 
-            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+            // Build Member List with "View Statement" Button
+            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => {
+                return `<tr>
+                    <td><b>${m[0]}</b></td>
+                    <td>${m[1]}</td>
+                    <td>${m[2]}</td>
+                    <td><button onclick="viewStatement('${m[0].replace(/'/g, "\\'")}')" class="statement-btn">Statement</button></td>
+                </tr>`;
+            }).join('');
             
+            // Build Monthly Growth Table
             let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
-            data.growth.forEach(r => { mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`; });
+            data.growth.forEach(r => { 
+                mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`; 
+            });
             document.getElementById('monthly-table-data').innerHTML = mHtml + "</tbody></table>";
         }
     } catch (e) { console.error("Sync Error:", e); }
 }
+
 function updateWeeklyDisplay() {
     if (weekKeys.length === 0) return;
     
     const rawDate = weekKeys[currentWeekIndex];
     const weekData = weeklyDataGrouped[rawDate];
 
-    // CLEAN DATE DISPLAY: Format to "Sunday, 4 January 2026"
+    // Format Date nicely (Monday, 1 January 2026)
     const dateObj = new Date(rawDate);
     const cleanDate = dateObj.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     document.getElementById('week-label').innerText = cleanDate;
@@ -83,7 +94,7 @@ function updateWeeklyDisplay() {
     const normalizeDate = (d) => new Date(d).setHours(0,0,0,0);
     const targetDate = normalizeDate(rawDate);
 
-    // INCOME: Filter out items with no name or 0 amount
+    // Weekly Income List (Filters out Phantoms)
     let calcIncomeTotal = 0;
     let incHtml = weekData.income
         .filter(i => i.name && i.name.trim() !== "" && !i.name.toUpperCase().includes("TOTAL") && cleanNum(i.amount) > 0)
@@ -93,7 +104,7 @@ function updateWeeklyDisplay() {
             return `<li>${i.name} <span>${val.toLocaleString()}</span></li>`;
         }).join('');
     
-    // EXPENDITURE: Filter out phantom rows/items with no name
+    // Weekly Expenditure List (Filters out Phantoms)
     let calcExpenseTotal = 0;
     let expHtml = weekData.expense
         .filter(e => e.name && e.name.trim() !== "" && !e.name.toUpperCase().includes("TOTAL") && cleanNum(e.amount) > 0)
@@ -105,7 +116,6 @@ function updateWeeklyDisplay() {
 
     const weeklyBalance = calcIncomeTotal - calcExpenseTotal;
 
-    // Build the UI Lists
     document.getElementById('income-details').innerHTML = (incHtml || "<li>No income recorded.</li>") + 
         `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
     
@@ -113,7 +123,7 @@ function updateWeeklyDisplay() {
         `<li class="total-row">TOTAL EXPENDITURE <span>${calcExpenseTotal.toLocaleString()}</span></li>` +
         `<li style="color:${weeklyBalance >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:bold; border:none; margin-top:8px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
 
-    // CELL ANALYTICS: Competition Leaderboard
+    // Cell Analytics
     let cellRankings = {};
     rawMemberGiving.forEach(record => {
         if (record[0] && normalizeDate(record[0]) === targetDate) {
@@ -124,16 +134,7 @@ function updateWeeklyDisplay() {
     });
     let sortedCells = Object.entries(cellRankings).sort((a, b) => b[1] - a[1]);
     document.getElementById('cell-analytics-data').innerHTML = sortedCells.length > 0 ? sortedCells.map((c, i) => {
-        let medal = i === 0 ? "🥇" : (i === 1 ? "🥈" : (i === 2 ? "🥉" : ""));
-        return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;"><span><b>${i+1}. ${c[0]} ${medal}</b></span><span>KES ${c[1].toLocaleString()}</span></div>`;
-    }).join('') : `<p style='color:#7f8c8d; text-align:center;'>No Cell data found for this week.</p>`;
-}
-
-function changeWeek(dir) { currentWeekIndex += dir; if (currentWeekIndex < 0) currentWeekIndex = 0; if (currentWeekIndex >= weekKeys.length) currentWeekIndex = weekKeys.length - 1; updateWeeklyDisplay(); }
-function jumpToLatest() { if (weekKeys.length > 0) { currentWeekIndex = weekKeys.length - 1; updateWeeklyDisplay(); } }
-function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active-content')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-' + id).classList.add('active-content'); btn.classList.add('active'); }
-function searchTable() { let input = document.getElementById('memberSearch').value.toUpperCase(); let rows = document.querySelector("#members-table tbody").rows; for (let i = 0; i < rows.length; i++) { rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none"; } }
-function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+        let medal =
 
 
 
