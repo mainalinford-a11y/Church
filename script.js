@@ -1,51 +1,41 @@
-/**
- * ACK GITUNDU MANAGEMENT SYSTEM - FRONTEND
- */
-
-// 1. MAKE SURE THESE ARE CORRECT
-const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
+// 1. CONFIGURATION
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
+const WEB_APP_URL = "YOUR_DEPLOYMENT_URL_HERE"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
+// 2. GLOBAL VARIABLES
 let weeklyDataGrouped = {};
 let weekKeys = [];
 let currentWeekIndex = 0;
 let rawMemberGiving = []; 
 
-// This runs as soon as the page loads
-window.onload = () => {
-    console.log("Portal Loaded");
-    const saved = localStorage.getItem('ackRole');
-    if (saved) { 
-        showDashboard(saved); 
-        fetchDashboardData(); 
+// 3. PAGE LOAD LOGIC
+window.onload = function() {
+    console.log("App Initialized");
+    const savedRole = localStorage.getItem('ackRole');
+    if (savedRole) {
+        showDashboard(savedRole);
+        fetchDashboardData();
     }
 };
 
-// LOGIN FUNCTION
+// 4. LOGIN LOGIC
 function checkLogin() {
-    console.log("Login button clicked");
     const passInput = document.getElementById('pass');
-    if (!passInput) {
-        console.error("Input field 'pass' not found");
-        return;
-    }
+    if (!passInput) return;
     
-    const code = passInput.value.trim();
+    const val = passInput.value.trim();
     let role = null;
 
-    if (code === CODES.ADMIN) {
-        role = "EDITOR";
-    } else if (code === CODES.VIEW) {
-        role = "VIEWER";
-    }
+    if (val === CODES.ADMIN) role = "EDITOR";
+    else if (val === CODES.VIEW) role = "VIEWER";
 
     if (role) {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { 
-        alert("Access Denied. Please check your code."); 
+    } else {
+        alert("Incorrect code. Please try again.");
     }
 }
 
@@ -53,160 +43,132 @@ function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     const container = document.getElementById('spreadsheet-container');
-    let mode = (role === "EDITOR") ? "edit" : "preview";
+    const mode = (role === "EDITOR") ? "edit" : "preview";
     container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
 }
 
+// 5. DATA FETCHING
 async function fetchDashboardData() {
-    console.log("Fetching data...");
     try {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
-        if(data.status === "success") {
-            // Update Annual Summary Cards
+        
+        if (data.status === "success") {
+            // Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
-            const balEl = document.getElementById('total-balance');
-            balEl.innerText = "KES " + bal.toLocaleString();
-            balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
+            const bEl = document.getElementById('total-balance');
+            bEl.innerText = "KES " + bal.toLocaleString();
+            bEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
+            // Weekly Processing
             rawMemberGiving = data.memberGiving || [];
-            weeklyDataGrouped = data.weeklyHistory;
-            
+            weeklyDataGrouped = data.weeklyHistory || {};
             weekKeys = Object.keys(weeklyDataGrouped)
-                .filter(dateStr => new Date(dateStr).getFullYear() >= 2026)
-                .sort((a,b) => new Date(a) - new Date(b));
+                .filter(d => new Date(d).getFullYear() >= 2026)
+                .sort((a, b) => new Date(a) - new Date(b));
             
-            currentWeekIndex = weekKeys.length - 1; 
+            currentWeekIndex = weekKeys.length - 1;
             updateWeeklyDisplay();
 
-            // Build Member List with updated row mapping
+            // Member Table - FIXED VERSION
             const tbody = document.querySelector('#members-table tbody');
             if (tbody) {
                 tbody.innerHTML = data.members.map(m => {
+                    const safeName = m[0].replace(/'/g, "\\'");
                     return `<tr>
                         <td><b>${m[0]}</b></td>
                         <td>${m[1]}</td>
-                        <td>${m[2]}</td>
-                        <td><button onclick="viewStatement('${m[0].replace(/'/g, "\\'")}')" class="statement-btn">Statement</button></td>
+                        <td>Active</td>
+                        <td><button class="statement-btn" onclick="viewStatement('${safeName}')">Statement</button></td>
                     </tr>`;
                 }).join('');
             }
-            
-            // Build Monthly Growth Table
-            const monthlyTable = document.getElementById('monthly-table-data');
-            if (monthlyTable) {
-                let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
-                data.growth.forEach(r => { 
-                    mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`; 
+
+            // Growth Table
+            const gDiv = document.getElementById('monthly-table-data');
+            if (gDiv) {
+                let h = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
+                data.growth.forEach(r => {
+                    h += `<tr><td>${r.month}</td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green':'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
                 });
-                monthlyTable.innerHTML = mHtml + "</tbody></table>";
+                gDiv.innerHTML = h + "</tbody></table>";
             }
         }
-    } catch (e) { console.error("Sync Error:", e); }
+    } catch (err) {
+        console.error("Data fetch error:", err);
+    }
 }
 
-async function fetchDashboardData() {
-    try {
-        const response = await fetch(WEB_APP_URL);
-        const data = await response.json();
-        if(data.status === "success") {
-            // Update Annual Summary Cards
-            document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
-            document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
-            const bal = data.finance.balance || 0;
-            const balEl = document.getElementById('total-balance');
-            balEl.innerText = "KES " + bal.toLocaleString();
-            balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
-
-            rawMemberGiving = data.memberGiving || [];
-            weeklyDataGrouped = data.weeklyHistory;
-            
-            // Filter keys for 2026 and sort chronologically
-            weekKeys = Object.keys(weeklyDataGrouped)
-                .filter(dateStr => new Date(dateStr).getFullYear() >= 2026)
-                .sort((a,b) => new Date(a) - new Date(b));
-            
-            currentWeekIndex = weekKeys.length - 1; 
-            updateWeeklyDisplay();
-
-            // Build Member List with "View Statement" Button
-            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => {
-                return `<tr>
-                    <td><b>${m[0]}</b></td>
-                    <td>${m[1]}</td>
-                    <td>${m[2]}</td>
-                    <td><button onclick="viewStatement('${m[0].replace(/'/g, "\\'")}')" class="statement-btn">Statement</button></td>
-                </tr>`;
-            }).join('');
-            
-            // Build Monthly Growth Table
-            let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
-            data.growth.forEach(r => { 
-                mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`; 
-            });
-            document.getElementById('monthly-table-data').innerHTML = mHtml + "</tbody></table>";
-        }
-    } catch (e) { console.error("Sync Error:", e); }
-}
-
+// 6. WEEKLY DISPLAY LOGIC
 function updateWeeklyDisplay() {
     if (weekKeys.length === 0) return;
+    const dateStr = weekKeys[currentWeekIndex];
+    const week = weeklyDataGrouped[dateStr];
+    document.getElementById('week-label').innerText = new Date(dateStr).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+
+    const clean = (v) => parseFloat(String(v).replace(/,/g, '')) || 0;
+
+    let incT = 0, expT = 0;
+    let incH = week.income.filter(i => i.name && !i.name.includes("TOTAL")).map(i => {
+        incT += clean(i.amount);
+        return `<li>${i.name} <span>${clean(i.amount).toLocaleString()}</span></li>`;
+    }).join('');
     
-    const rawDate = weekKeys[currentWeekIndex];
-    const weekData = weeklyDataGrouped[rawDate];
+    let expH = week.expense.filter(e => e.name && !e.name.includes("TOTAL")).map(e => {
+        expT += clean(e.amount);
+        return `<li>${e.name} <span>${clean(e.amount).toLocaleString()}</span></li>`;
+    }).join('');
 
-    // Format Date nicely (Monday, 1 January 2026)
-    const dateObj = new Date(rawDate);
-    const cleanDate = dateObj.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    document.getElementById('week-label').innerText = cleanDate;
+    document.getElementById('income-details').innerHTML = incH + `<li class="total-row">TOTAL <span>${incT.toLocaleString()}</span></li>`;
+    document.getElementById('expense-details').innerHTML = expH + `<li class="total-row">TOTAL <span>${expT.toLocaleString()}</span></li>`;
 
-    const cleanNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0;
-    const normalizeDate = (d) => new Date(d).setHours(0,0,0,0);
-    const targetDate = normalizeDate(rawDate);
-
-    // Weekly Income List (Filters out Phantoms)
-    let calcIncomeTotal = 0;
-    let incHtml = weekData.income
-        .filter(i => i.name && i.name.trim() !== "" && !i.name.toUpperCase().includes("TOTAL") && cleanNum(i.amount) > 0)
-        .map(i => {
-            const val = cleanNum(i.amount);
-            calcIncomeTotal += val;
-            return `<li>${i.name} <span>${val.toLocaleString()}</span></li>`;
-        }).join('');
-    
-    // Weekly Expenditure List (Filters out Phantoms)
-    let calcExpenseTotal = 0;
-    let expHtml = weekData.expense
-        .filter(e => e.name && e.name.trim() !== "" && !e.name.toUpperCase().includes("TOTAL") && cleanNum(e.amount) > 0)
-        .map(e => {
-            const val = cleanNum(e.amount);
-            calcExpenseTotal += val;
-            return `<li>${e.name} <span>${val.toLocaleString()}</span></li>`;
-        }).join('');
-
-    const weeklyBalance = calcIncomeTotal - calcExpenseTotal;
-
-    document.getElementById('income-details').innerHTML = (incHtml || "<li>No income recorded.</li>") + 
-        `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
-    
-    document.getElementById('expense-details').innerHTML = (expHtml || "<li>No expenses recorded.</li>") + 
-        `<li class="total-row">TOTAL EXPENDITURE <span>${calcExpenseTotal.toLocaleString()}</span></li>` +
-        `<li style="color:${weeklyBalance >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:bold; border:none; margin-top:8px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
-
-    // Cell Analytics
-    let cellRankings = {};
-    rawMemberGiving.forEach(record => {
-        if (record[0] && normalizeDate(record[0]) === targetDate) {
-            let cellName = record[1]; 
-            let amount = cleanNum(record[2]);
-            if (cellName) cellRankings[cellName] = (cellRankings[cellName] || 0) + amount;
+    // Analytics
+    let cells = {};
+    rawMemberGiving.forEach(r => {
+        if (new Date(r[0]).toDateString() === new Date(dateStr).toDateString()) {
+            cells[r[1]] = (cells[r[1]] || 0) + clean(r[2]);
         }
     });
-    let sortedCells = Object.entries(cellRankings).sort((a, b) => b[1] - a[1]);
-    document.getElementById('cell-analytics-data').innerHTML = sortedCells.length > 0 ? sortedCells.map((c, i) => {
-        let medal =
+    const sorted = Object.entries(cells).sort((a,b) => b[1]-a[1]);
+    document.getElementById('cell-analytics-data').innerHTML = sorted.map(c => `<div style="display:flex;justify-content:space-between;padding:5px 0;"><span>${c[0]}</span><span>KES ${c[1].toLocaleString()}</span></div>`).join('');
+}
+
+// 7. STATEMENT POPUP
+async function viewStatement(name) {
+    const start = prompt("Start Date (YYYY-MM-DD):", "2026-01-01");
+    const end = prompt("End Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+    if (!start || !end) return;
+
+    const url = `${WEB_APP_URL}?action=getStatement&name=${encodeURIComponent(name)}&start=${start}&end=${end}`;
+    try {
+        const res = await fetch(url);
+        const d = await res.json();
+        if (!d.history || d.history.length === 0) return alert("No records found.");
+
+        let m = `STATEMENT: ${d.name}\nTotal: KES ${d.summary.total.toLocaleString()}\n\nRecent History:\n`;
+        d.history.forEach(h => m += `${h.date}: ${h.total}\n`);
+        alert(m);
+    } catch (e) { alert("Error loading statement."); }
+}
+
+// 8. UTILITIES
+function changeWeek(n) { currentWeekIndex += n; if(currentWeekIndex<0) currentWeekIndex=0; if(currentWeekIndex>=weekKeys.length) currentWeekIndex=weekKeys.length-1; updateWeeklyDisplay(); }
+function switchTab(id, b) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active-content'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active-content');
+    b.classList.add('active');
+}
+function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+function searchTable() {
+    let val = document.getElementById('memberSearch').value.toUpperCase();
+    let rows = document.querySelector("#members-table tbody").rows;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
+    }
+}
 
 
 
