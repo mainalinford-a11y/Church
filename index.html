@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ST MARKS ACK GITUNDU - Executive Portal</title>
+    <title>ST MARKS ACK GITUNDU - Portal</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -24,122 +24,81 @@
                 <h1>ST MARKS ACK GITUNDU</h1>
                 <span id="user-tag"></span>
             </div>
-            <button class="logout-btn" onclick="logout()" title="Logout">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
         </header>
 
         <nav class="tabs">
-            <button class="tab-btn active" onclick="switchTab('overview')">
-                <i class="fas fa-chart-line"></i> Overview
-            </button>
-            <button class="tab-btn" onclick="switchTab('members')">
-                <i class="fas fa-users"></i> Members Register
-            </button>
-            <button class="tab-btn" onclick="switchTab('analytics')">
-                <i class="fas fa-chart-bar"></i> Monthly Progress
-            </button>
+            <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+            <button class="tab-btn" onclick="switchTab('spreadsheet')">Live Spreadsheet</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">Monthly Progress</button>
+            <button class="tab-btn" onclick="switchTab('members')">Members</button>
         </nav>
 
         <div id="tab-overview" class="tab-content active">
-            <div class="last-sync">
-                <i class="fas fa-sync"></i> Last Updated: <span id="sync-time">Syncing...</span>
-            </div>
-
             <div class="summary-cards">
                 <div class="card">
-                    <div class="card-icon income-icon"><i class="fas fa-hand-holding-usd"></i></div>
                     <h3>Total Income</h3>
                     <div class="number" id="total-income">...</div>
-                    <div class="trend">Latest Sunday Collection</div>
                 </div>
                 <div class="card">
-                    <div class="card-icon expense-icon"><i class="fas fa-file-invoice-dollar"></i></div>
                     <h3>Total Expenditure</h3>
                     <div class="number" id="total-expense">...</div>
-                    <div class="trend">Weekly Expenses</div>
                 </div>
                 <div class="card balance-card">
-                    <div class="card-icon balance-icon"><i class="fas fa-wallet"></i></div>
                     <h3>Net Balance</h3>
                     <div class="number" id="total-balance">...</div>
-                    <div class="trend">Cash at Hand</div>
                 </div>
             </div>
 
             <div class="grid-container">
                 <div class="panel">
-                    <h3><i class="fas fa-list-ul"></i> Weekly Financial Breakdown</h3>
+                    <h3>Weekly Breakdown</h3>
                     <div class="breakdown-lists">
                         <div class="list-col">
-                            <h4 class="inc-title">Income Sources</h4>
+                            <h4 style="color:#2980b9">Income</h4>
                             <ul id="income-details" class="detail-list"></ul>
                         </div>
-                        <div class="list-col border-left">
-                            <h4 class="exp-title">Expenditure</h4>
+                        <div class="list-col" style="border-left: 1px solid #eee; padding-left: 15px;">
+                            <h4 style="color:#c0392b">Expenditure</h4>
                             <ul id="expense-details" class="detail-list"></ul>
                         </div>
                     </div>
                 </div>
-
                 <div class="panel">
-                    <h3><i class="fas fa-trophy"></i> Cell Leaderboard</h3>
-                    <div id="leaderboard-data" class="leaderboard-container"></div>
-                </div>
-            </div>
-
-            <div id="admin-controls" class="admin-panel" style="display:none;">
-                <h3><i class="fas fa-user-plus"></i> Add New Member</h3>
-                <div class="add-member-form">
-                    <input type="text" id="newMemName" placeholder="Full Name">
-                    <select id="newMemCell">
-                        <option value="" disabled selected>Select Cell Group</option>
-                        <option value="Samaria">Samaria</option>
-                        <option value="Jerusalem">Jerusalem</option>
-                        <option value="Bethany">Bethany</option>
-                        <option value="Galilee">Galilee</option>
-                        <option value="Jericho">Jericho</option>
-                        <option value="Bethlehem">Bethlehem</option>
-                        <option value="Damascus">Damascus</option>
-                        <option value="Jordan">Jordan</option>
-                    </select>
-                    <button onclick="addMember()">Save Member</button>
+                    <h3>Cell Leaderboard</h3>
+                    <div id="leaderboard-data"></div>
                 </div>
             </div>
         </div>
 
-        <div id="tab-members" class="tab-content">
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" id="memberSearch" onkeyup="searchTable()" placeholder="Search member by name...">
-            </div>
-            <div class="table-responsive">
-                <table class="data-table" id="members-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Number</th>
-                            <th>Cell Group</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+        <div id="tab-spreadsheet" class="tab-content">
+            <div class="panel" style="height: 80vh; padding: 0; overflow: hidden;">
+                <div id="spreadsheet-container" style="height: 100%; width: 100%;"></div>
             </div>
         </div>
 
         <div id="tab-analytics" class="tab-content">
             <div class="panel">
-                <h3><i class="fas fa-calendar-alt"></i> Annual Financial Summary</h3>
-                <div id="growth-chart-data" class="growth-container"></div>
+                <h3>Annual Financial Progress</h3>
+                <div id="growth-chart-data"></div>
             </div>
+        </div>
+
+        <div id="tab-members" class="tab-content">
+            <div class="search-bar">
+                <input type="text" id="memberSearch" onkeyup="searchTable()" placeholder="Search members...">
+            </div>
+            <table class="data-table" id="members-table">
+                <thead><tr><th>Name</th><th>No.</th><th>Cell</th><th>Type</th><th>Notes</th></tr></thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
