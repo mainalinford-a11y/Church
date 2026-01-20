@@ -35,6 +35,7 @@ async function fetchDashboardData() {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
         if(data.status === "success") {
+            // Annual Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -45,9 +46,18 @@ async function fetchDashboardData() {
             rawMemberGiving = data.memberGiving || [];
             weeklyDataGrouped = data.weeklyHistory;
             
-            // Sort keys to ensure chronologically correct order
-            weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
-            currentWeekIndex = weekKeys.length - 1; // Default to latest week
+            // --- UPDATED FILTERING LOGIC ---
+            // Only keep weeks that are in the year 2026 or later
+            weekKeys = Object.keys(weeklyDataGrouped)
+                .filter(dateStr => {
+                    const d = new Date(dateStr);
+                    return d.getFullYear() >= 2026; 
+                })
+                .sort((a,b) => new Date(a) - new Date(b));
+            // -------------------------------
+
+            // Start at index 0 (the first Sunday of January 2026)
+            currentWeekIndex = 0; 
             updateWeeklyDisplay();
 
             document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
@@ -58,7 +68,6 @@ async function fetchDashboardData() {
         }
     } catch (e) { console.error("Sync Error:", e); }
 }
-
 function updateWeeklyDisplay() {
     if (weekKeys.length === 0) return;
     
@@ -125,6 +134,7 @@ function jumpToLatest() { if (weekKeys.length > 0) { currentWeekIndex = weekKeys
 function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active-content')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-' + id).classList.add('active-content'); btn.classList.add('active'); }
 function searchTable() { let input = document.getElementById('memberSearch').value.toUpperCase(); let rows = document.querySelector("#members-table tbody").rows; for (let i = 0; i < rows.length; i++) { rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none"; } }
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
