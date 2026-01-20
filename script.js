@@ -1,9 +1,6 @@
-// --- CONFIGURATION ---
-const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit?gid=1163952619#gid=1163952619";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
+const WEB_APP_URL = "YOUR_NEW_DEPLOYMENT_URL_HERE"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
-// --- SYSTEM LOGIC ---
 window.onload = () => {
     const saved = localStorage.getItem('ackRole');
     if (saved) { showDashboard(saved); fetchDashboardData(); }
@@ -22,52 +19,61 @@ function checkLogin() {
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
-    document.getElementById('user-tag').innerText = `(${role} MODE)`;
-
-    // Embedded Spreadsheet Logic
-    const container = document.getElementById('spreadsheet-container');
-    let sheetUrl = "";
-    if (role === "EDITOR") {
-        sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit?rm=minimal`;
-    } else {
-        sheetUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/preview?rm=minimal`;
-    }
-    container.innerHTML = `<iframe src="${sheetUrl}"></iframe>`;
+    document.getElementById('admin-controls').style.display = role === "EDITOR" ? 'block' : 'none';
+    document.getElementById('viewer-controls').style.display = role === "VIEWER" ? 'block' : 'none';
+    document.getElementById('user-tag').innerText = ` (${role} Mode)`;
 }
 
 async function fetchDashboardData() {
     try {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
+        
         if(data.status === "success") {
-            // Summary Cards
-            document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
-            document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
-            document.getElementById('total-balance').innerText = "KES " + Number(data.finance.balance).toLocaleString();
+            // 1. Weekly Finance Summary
+            document.getElementById('total-income').innerText = "KES " + data.finance.income.toLocaleString();
+            document.getElementById('total-expense').innerText = "KES " + data.finance.expense.toLocaleString();
             
-            // Weekly Details (Income Index 1, Exp Index 3)
-            document.getElementById('income-details').innerHTML = data.finance.details
-                .map(row => row[1] > 0 ? `<li>${row[0]} <b>${Number(row[1]).toLocaleString()}</b></li>` : '').join('');
-            document.getElementById('expense-details').innerHTML = data.finance.details
-                .map(row => row[3] > 0 ? `<li>${row[0]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '').join('');
+            // Handle Weekly Balance (Optional: You can add a balance ID to your HTML)
+            const balanceVal = data.finance.income - data.finance.expense;
+            const balanceEl = document.getElementById('total-balance');
+            if(balanceEl) { balanceEl.innerText = "KES " + balanceVal.toLocaleString(); }
 
-            // Leaderboard
+            // 2. Weekly Details Breakdown
+            document.getElementById('income-details').innerHTML = data.finance.details
+                .map(row => row[1] > 0 ? `<li>${row[0]}: <b>KES ${row[1].toLocaleString()}</b></li>` : '').join('');
+            document.getElementById('expense-details').innerHTML = data.finance.details
+                .map(row => row[3] > 0 ? `<li>${row[0]}: <b>KES ${row[3].toLocaleString()}</b></li>` : '').join('');
+
+            // 3. Cell Leaderboard
             document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
-                <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee;">
-                    <span>#${i+1} ${cell[0]}</span><span>${Number(cell[1]).toLocaleString()}</span>
+                <div class="rank-row">
+                    <span><b>#${i+1}</b> ${cell[0]}</span>
+                    <span>KES ${Number(cell[1]).toLocaleString()}</span>
                 </div>`).join('');
 
-            // Members Table
+            // 4. Member Register
             document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
-                <tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+                <tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Progress (Fixed Column Mapping)
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
+            // 5. Monthly Financial Growth
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
+            
             data.growth.forEach((row, i) => {
-                growthHtml += `<tr><td><b>${months[i] || 'M'+(i+1)}</b></td><td>${row.inc.toLocaleString()}</td><td>${row.exp.toLocaleString()}</td><td class="${row.bal >= 0 ? 'pos-bal' : 'neg-bal'}">${row.bal.toLocaleString()}</td></tr>`;
+                const bal = row[0] - row[1];
+                const balClass = bal >= 0 ? "pos-bal" : "neg-bal";
+                growthHtml += `
+                    <tr>
+                        <td><b>${months[i] || "Period " + (i+1)}</b></td>
+                        <td>KES ${row[0].toLocaleString()}</td>
+                        <td>KES ${row[1].toLocaleString()}</td>
+                        <td class="${balClass}">KES ${bal.toLocaleString()}</td>
+                    </tr>`;
             });
             document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
+
+            document.getElementById('sync-time').innerText = data.lastUpdated;
         }
     } catch (e) { console.error("Sync Error", e); }
 }
@@ -83,11 +89,13 @@ function searchTable() {
     let input = document.getElementById('memberSearch').value.toUpperCase();
     let rows = document.querySelector("#members-table tbody").rows;
     for (let i = 0; i < rows.length; i++) {
-        rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none";
+        let name = rows[i].cells[0].innerText.toUpperCase();
+        rows[i].style.display = name.indexOf(input) > -1 ? "" : "none";
     }
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
