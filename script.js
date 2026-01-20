@@ -35,7 +35,7 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Annual Cards - Pulled from the main summary
+            // Annual Summary Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -43,9 +43,11 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly History - Sort chronologically (Jan to Dec)
+            // Weekly Data - Sorted Jan to Dec
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
+            
+            // Set to 0 (Jan) by default, but user can click "Jump to Latest"
             currentWeekIndex = 0; 
             updateWeeklyDisplay();
 
@@ -56,18 +58,18 @@ async function fetchDashboardData() {
                     <span>KES ${Number(c[1]).toLocaleString()}</span>
                 </div>`).join('');
 
-            // Members Tab Full List
+            // Full Member List
             document.querySelector('#members-table tbody').innerHTML = data.members
                 .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Progress Tab
+            // Monthly Tab
             let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
                 mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
             });
             document.getElementById('monthly-table-data').innerHTML = mHtml + "</tbody></table>";
         }
-    } catch (e) { console.error("Fetch Error:", e); }
+    } catch (e) { console.error("Sync Error:", e); }
 }
 
 function updateWeeklyDisplay() {
@@ -76,34 +78,37 @@ function updateWeeklyDisplay() {
     const weekData = weeklyDataGrouped[dateKey];
     document.getElementById('week-label').innerText = dateKey;
 
-    // INTERNAL MATH LOGIC: 
-    // We filter out any row that contains the word "TOTAL" to avoid double-counting
+    const cleanNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0;
+
+    // Process INCOME list and sum
     let calcIncomeTotal = 0;
     let incHtml = weekData.income
-        .filter(i => !i.name.toUpperCase().includes("TOTAL"))
+        .filter(i => i.name && !i.name.toUpperCase().includes("TOTAL") && cleanNum(i.amount) > 0)
         .map(i => {
-            const val = parseFloat(i.amount) || 0;
+            const val = cleanNum(i.amount);
             calcIncomeTotal += val;
             return `<li>${i.name} <span>${val.toLocaleString()}</span></li>`;
         }).join('');
     
-    incHtml += `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
-    document.getElementById('income-details').innerHTML = incHtml;
+    document.getElementById('income-details').innerHTML = incHtml + 
+        `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
 
+    // Process EXPENDITURE list and sum
     let calcExpenseTotal = 0;
     let expHtml = weekData.expense
-        .filter(e => !e.name.toUpperCase().includes("TOTAL"))
+        .filter(e => e.name && !e.name.toUpperCase().includes("TOTAL") && cleanNum(e.amount) > 0)
         .map(e => {
-            const val = parseFloat(e.amount) || 0;
+            const val = cleanNum(e.amount);
             calcExpenseTotal += val;
             return `<li>${e.name} <span>${val.toLocaleString()}</span></li>`;
         }).join('');
 
     const weeklyBalance = calcIncomeTotal - calcExpenseTotal;
+    let balanceColor = weeklyBalance >= 0 ? "#27ae60" : "#e74c3c";
     
-    expHtml += `<li class="total-row">TOTAL EXPENDITURE <span>${calcExpenseTotal.toLocaleString()}</span></li>`;
-    expHtml += `<li style="color:${weeklyBalance >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:bold; border:none; margin-top:5px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
-    document.getElementById('expense-details').innerHTML = expHtml;
+    document.getElementById('expense-details').innerHTML = expHtml + 
+        `<li class="total-row">TOTAL EXPENDITURE <span>${calcExpenseTotal.toLocaleString()}</span></li>` +
+        `<li style="color:${balanceColor}; font-weight:bold; border:none; margin-top:8px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
 }
 
 function changeWeek(dir) {
@@ -111,6 +116,14 @@ function changeWeek(dir) {
     if (currentWeekIndex < 0) currentWeekIndex = 0;
     if (currentWeekIndex >= weekKeys.length) currentWeekIndex = weekKeys.length - 1;
     updateWeeklyDisplay();
+}
+
+// NEW FUNCTION: Jump to the very last week available
+function jumpToLatest() {
+    if (weekKeys.length > 0) {
+        currentWeekIndex = weekKeys.length - 1;
+        updateWeeklyDisplay();
+    }
 }
 
 function switchTab(id, btn) {
@@ -129,6 +142,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
