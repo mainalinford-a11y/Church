@@ -1,5 +1,5 @@
-const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
+const WEB_APP_URL = "YOUR_DEPLOYMENT_URL_HERE"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
 let weeklyDataGrouped = {};
@@ -36,7 +36,6 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Annual Summary Cards from your Annual Records sheet
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -44,20 +43,15 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Store the Member Giving records for the analytics section
             rawMemberGiving = data.memberGiving || [];
-
-            // Sort weeks starting from Jan 04 2026
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
             currentWeekIndex = 0; 
             updateWeeklyDisplay();
 
-            // Full Member Directory
             document.querySelector('#members-table tbody').innerHTML = data.members
                 .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Progress Data
             let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
                 mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
@@ -75,7 +69,11 @@ function updateWeeklyDisplay() {
 
     const cleanNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0;
 
-    // 1. Calculate and Display Income Items
+    // Helper to normalize dates for comparison (fixes the "18 Jan" vs "2026-01-18" issue)
+    const normalizeDate = (d) => new Date(d).setHours(0,0,0,0);
+    const targetDate = normalizeDate(dateKey);
+
+    // 1. Weekly Income Calculation
     let calcIncomeTotal = 0;
     let incHtml = weekData.income
         .filter(i => i.name && !i.name.toUpperCase().includes("TOTAL") && cleanNum(i.amount) > 0)
@@ -88,14 +86,13 @@ function updateWeeklyDisplay() {
     document.getElementById('income-details').innerHTML = incHtml + 
         `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
 
-    // 2. Weekly Cell Analytics (The Godly Competition)
-    // Matches Column A (Date) and Column C (Cell Group) from your Member Giving sheet
+    // 2. Weekly Cell Analytics (Corrected Date Matching)
     let cellRankings = {};
     rawMemberGiving.forEach(record => {
-        // Date check (Column A must match selected week)
-        if (record[0] === dateKey) {
-            let cellName = record[1]; // Column C: Samaria, Bethlehem, etc.
-            let amount = cleanNum(record[2]); // Column G: Total Giving
+        // record[0] is the date from Member Giving Sheet
+        if (record[0] && normalizeDate(record[0]) === targetDate) {
+            let cellName = record[1]; // Column C
+            let amount = cleanNum(record[2]); // Column G
             if (cellName) {
                 cellRankings[cellName] = (cellRankings[cellName] || 0) + amount;
             }
@@ -114,10 +111,10 @@ function updateWeeklyDisplay() {
                 </div>`;
             }).join('');
     } else {
-        document.getElementById('cell-analytics-data').innerHTML = "<p style='color:#7f8c8d; text-align:center;'>No Cell Giving recorded for " + dateKey + "</p>";
+        document.getElementById('cell-analytics-data').innerHTML = "<p style='color:#7f8c8d; text-align:center;'>No Cell data found for this date.</p>";
     }
 
-    // 3. Calculate and Display Expenditure Items
+    // 3. Weekly Expenditure Calculation
     let calcExpenseTotal = 0;
     let expHtml = weekData.expense
         .filter(e => e.name && !e.name.toUpperCase().includes("TOTAL") && cleanNum(e.amount) > 0)
