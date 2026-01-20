@@ -1,5 +1,5 @@
-const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
+const WEB_APP_URL = "YOUR_WEB_APP_URL_HERE"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
 window.onload = () => {
@@ -14,73 +14,61 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Incorrect Access Code."); }
+    } else { alert("Incorrect Code."); }
 }
 
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('user-tag').innerText = `(${role} MODE)`;
-    
-    const container = document.getElementById('spreadsheet-container');
-    let mode = (role === "EDITOR") ? "edit" : "preview";
-    container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
+    const mode = (role === "EDITOR") ? "edit" : "preview";
+    document.getElementById('spreadsheet-container').innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
 }
 
 async function fetchDashboardData() {
     try {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
-        if(data.status === "success") {
-            // Main Cards
-            document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
-            document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
-            document.getElementById('total-balance').innerText = "KES " + Number(data.finance.balance).toLocaleString();
+        
+        // Cards - Forced Number Conversion to avoid NaN
+        document.getElementById('total-income').innerText = "KES " + (Number(data.finance.income) || 0).toLocaleString();
+        document.getElementById('total-expense').innerText = "KES " + (Number(data.finance.expense) || 0).toLocaleString();
+        const bal = Number(data.finance.balance) || 0;
+        document.getElementById('total-balance').innerText = "KES " + bal.toLocaleString();
+        document.getElementById('total-balance').style.color = bal >= 0 ? "green" : "red";
 
-            // Weekly Lists
-            document.getElementById('income-details').innerHTML = data.finance.details
-                .map(row => row[2] > 0 ? `<li>${row[1]} <b>${Number(row[2]).toLocaleString()}</b></li>` : '').join('');
-            document.getElementById('expense-details').innerHTML = data.finance.details
-                .map(row => row[3] > 0 ? `<li>${row[1]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '').join('');
+        // Weekly List
+        document.getElementById('income-details').innerHTML = data.finance.details
+            .map(r => Number(r[2]) > 0 ? `<li>${r[1]} <b>${Number(r[2]).toLocaleString()}</b></li>` : '').join('');
+        document.getElementById('expense-details').innerHTML = data.finance.details
+            .map(r => Number(r[3]) > 0 ? `<li>${r[1]} <b>${Number(r[3]).toLocaleString()}</b></li>` : '').join('');
 
-            // Cell Leaderboard (FIXED)
-            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
-                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;">
-                    <span>#${i+1} ${cell[0]}</span><b>${Number(cell[1]).toLocaleString()}</b>
-                </div>`).join('');
+        // Leaderboard
+        document.getElementById('leaderboard-data').innerHTML = data.topCells
+            .map((c, i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;"><span>#${i+1} ${c[0]}</span><b>${(Number(c[1]) || 0).toLocaleString()}</b></div>`).join('');
 
-            // Members Table (FIXED)
-            if (data.members && data.members.length > 0) {
-                document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
-                    <tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
-            }
+        // Members
+        document.querySelector('#members-table tbody').innerHTML = data.members
+            .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Progress
-            let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
-            data.growth.forEach(row => {
-                growthHtml += `<tr><td><b>${row.month}</b></td><td>${Number(row.inc).toLocaleString()}</td><td>${Number(row.exp).toLocaleString()}</td><td style="color:${row.bal >= 0 ? 'green' : 'red'}"><b>${Number(row.bal).toLocaleString()}</b></td></tr>`;
-            });
-            document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
-        }
+        // Monthly
+        let gHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
+        data.growth.forEach(r => {
+            gHtml += `<tr><td><b>${r.month}</b></td><td>${(Number(r.inc) || 0).toLocaleString()}</td><td>${(Number(r.exp) || 0).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}"><b>${(Number(r.bal) || 0).toLocaleString()}</b></td></tr>`;
+        });
+        document.getElementById('growth-chart-data').innerHTML = gHtml + "</tbody></table>";
+        
     } catch (e) { console.error("Sync Error:", e); }
 }
 
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tab-' + tabName).classList.add('active');
+function switchTab(t) {
+    document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + t).classList.add('active');
     event.currentTarget.classList.add('active');
 }
 
-function searchTable() {
-    let input = document.getElementById('memberSearch').value.toUpperCase();
-    let rows = document.querySelector("#members-table tbody").rows;
-    for (let i = 0; i < rows.length; i++) {
-        rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none";
-    }
-}
-
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
