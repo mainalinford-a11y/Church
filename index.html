@@ -3,95 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ST MARKS ACK GITUNDU - Portal</title>
+    <title>St. Marks ACK Gitundu - Finance Portal</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Modern Dashboard Styles */
+        :root {
+            --primary: #2c3e50;
+            --success: #28a745;
+            --danger: #dc3545;
+            --light: #f8f9fa;
+        }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #ececec; }
+        #login-container { max-width: 400px; margin: 100px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        .dashboard-header { background: var(--primary); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; padding: 20px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        .stat-value { font-size: 1.8em; font-weight: bold; margin-top: 10px; }
+        
+        /* Weekly Navigation Styles */
+        .weekly-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0 20px; }
+        .weekly-box { background: white; padding: 20px; border-radius: 10px; min-height: 200px; }
+        .nav-bar { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 20px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .nav-btn { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        .nav-btn:hover { opacity: 0.8; }
+        
+        ul { list-style: none; padding: 0; }
+        li { padding: 10px 0; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .total-row { border-top: 2px solid var(--primary); margin-top: 10px; font-weight: bold; color: var(--primary); }
+        
+        .tabs { display: flex; justify-content: center; background: white; border-bottom: 2px solid #ddd; }
+        .tab-btn { padding: 15px 25px; cursor: pointer; border: none; background: none; font-weight: bold; color: #666; }
+        .tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        
+        iframe { width: 100%; height: 600px; border: none; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .growth-table th { background: #f4f4f4; }
+    </style>
 </head>
 <body>
 
-    <div class="login-container" id="login-container">
-        <div class="login-box">
-            <h2><i class="fas fa-church"></i> ST MARKS ACK GITUNDU</h2>
-            <p>Executive Dashboard Access</p>
-            <input type="password" id="pass" placeholder="Enter Access Code">
-            <button onclick="checkLogin()">Enter Portal</button>
-        </div>
+    <div id="login-container">
+        <img src="https://img.icons8.com/color/96/church.png" alt="Church Logo">
+        <h2>Church Finance Portal</h2>
+        <input type="password" id="pass" placeholder="Enter Access Code" style="width: 80%; padding: 10px; margin-bottom: 20px;">
+        <button onclick="checkLogin()" class="nav-btn" style="width: 85%;">Access Dashboard</button>
     </div>
 
-    <div class="dashboard" id="dashboard">
-        <header>
-            <div class="header-title">
-                <h1>ST MARKS ACK GITUNDU</h1>
-                <span id="user-tag"></span>
+    <div id="dashboard" style="display: none;">
+        <div class="dashboard-header">
+            <div>
+                <h2 style="margin:0;">ST. MARKS ACK GITUNDU</h2>
+                <small id="user-tag"></small>
             </div>
-            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
-        </header>
+            <button onclick="logout()" class="nav-btn" style="background: #c0392b;">Logout</button>
+        </div>
 
-        <nav class="tabs">
-            <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
-            <button class="tab-btn" onclick="switchTab('spreadsheet')">Live Spreadsheet</button>
-            <button class="tab-btn" onclick="switchTab('analytics')">Monthly Progress</button>
-            <button class="tab-btn" onclick="switchTab('members')">Members</button>
-        </nav>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">OVERVIEW</button>
+            <button class="tab-btn" onclick="switchTab('members')">MEMBERS</button>
+            <button class="tab-btn" onclick="switchTab('records')">LIVE SPREADSHEET</button>
+        </div>
 
         <div id="tab-overview" class="tab-content active">
-            <div class="summary-cards">
-                <div class="card">
-                    <h3>Total Income</h3>
-                    <div class="number" id="total-income">...</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <small>ANNUAL INCOME</small>
+                    <div id="total-income" class="stat-value">KES 0</div>
                 </div>
-                <div class="card">
-                    <h3>Total Expenditure</h3>
-                    <div class="number" id="total-expense">...</div>
+                <div class="stat-card">
+                    <small>ANNUAL EXPENDITURE</small>
+                    <div id="total-expense" class="stat-value" style="color: var(--danger);">KES 0</div>
                 </div>
-                <div class="card balance-card">
-                    <h3>Net Balance</h3>
-                    <div class="number" id="total-balance">...</div>
+                <div class="stat-card">
+                    <small>NET BALANCE</small>
+                    <div id="total-balance" class="stat-value">KES 0</div>
                 </div>
             </div>
 
-            <div class="grid-container">
-                <div class="panel">
-                    <h3>Weekly Breakdown</h3>
-                    <div class="breakdown-lists">
-                        <div class="list-col">
-                            <h4 style="color:#2980b9">Income</h4>
-                            <ul id="income-details" class="detail-list"></ul>
-                        </div>
-                        <div class="list-col" style="border-left: 1px solid #eee; padding-left: 15px;">
-                            <h4 style="color:#c0392b">Expenditure</h4>
-                            <ul id="expense-details" class="detail-list"></ul>
-                        </div>
-                    </div>
+            <hr style="margin: 20px; border: 0; border-top: 1px solid #ccc;">
+
+            <h3 style="text-align: center;">Weekly Finance Breakdown</h3>
+            <div class="nav-bar">
+                <button onclick="changeWeek(1)" class="nav-btn">← Previous Week</button>
+                <span id="week-label" style="font-weight: bold; min-width: 150px; text-align: center;">Loading...</span>
+                <button onclick="changeWeek(-1)" class="nav-btn">Next Week →</button>
+            </div>
+
+            <div class="weekly-container">
+                <div class="weekly-box">
+                    <h4 style="color: var(--success); border-bottom: 2px solid var(--success);">WEEKLY INCOME</h4>
+                    <ul id="income-details"></ul>
                 </div>
-                <div class="panel">
-                    <h3>Cell Leaderboard</h3>
+                <div class="weekly-box">
+                    <h4 style="color: var(--danger); border-bottom: 2px solid var(--danger);">WEEKLY EXPENDITURE</h4>
+                    <ul id="expense-details"></ul>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card" style="text-align: left;">
+                    <h4>CELL LEADERBOARD</h4>
                     <div id="leaderboard-data"></div>
                 </div>
-            </div>
-        </div>
-
-        <div id="tab-spreadsheet" class="tab-content">
-            <div class="panel" style="height: 80vh; padding: 0; overflow: hidden;">
-                <div id="spreadsheet-container" style="height: 100%; width: 100%;"></div>
-            </div>
-        </div>
-
-        <div id="tab-analytics" class="tab-content">
-            <div class="panel">
-                <h3>Annual Financial Progress</h3>
-                <div id="growth-chart-data"></div>
+                <div class="stat-card">
+                    <h4>MONTHLY PROGRESS</h4>
+                    <div id="growth-chart-data"></div>
+                </div>
             </div>
         </div>
 
         <div id="tab-members" class="tab-content">
-            <div class="search-bar">
-                <input type="text" id="memberSearch" onkeyup="searchTable()" placeholder="Search members...">
+            <div style="background: white; padding: 20px; border-radius: 10px;">
+                <h3>Church Members List</h3>
+                <input type="text" id="memberSearch" onkeyup="searchTable()" placeholder="Search members by name..." style="width: 100%; padding: 10px; margin-bottom: 15px;">
+                <table id="members-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Cell</th>
+                            <th>ID Number</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
-            <table class="data-table" id="members-table">
-                <thead><tr><th>Name</th><th>No.</th><th>Cell</th><th>Type</th><th>Notes</th></tr></thead>
-                <tbody></tbody>
-            </table>
+        </div>
+
+        <div id="tab-records" class="tab-content">
+            <div id="spreadsheet-container"></div>
         </div>
     </div>
 
