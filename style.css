@@ -1,0 +1,103 @@
+:root {
+    --primary: #00796b;
+    --secondary: #2980b9;
+    --bg: #f4f7f6;
+    --dark: #2c3e50;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    margin: 0;
+    color: var(--dark);
+}
+
+.card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin: 1rem;
+}
+
+.wide {
+    width: calc(100% - 2rem);
+    max-width: 1000px;
+    margin: 1rem auto;
+}
+
+.login-card {
+    max-width: 400px;
+    margin: 100px auto;
+    text-align: center;
+}
+
+header {
+    background: var(--primary);
+    color: white;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+input,
+select {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    flex: 1;
+    min-width: 150px;
+}
+
+button {
+    padding: 12px 20px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+button.secondary {
+    background: var(--secondary);
+}
+
+.logout-btn {
+    background: #c0392b;
+    font-size: 0.8rem;
+}
+
+#login-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
