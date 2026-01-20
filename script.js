@@ -1,6 +1,6 @@
 // --- CONFIGURATION ---
-const SPREADSHEET_ID = "PASTE_YOUR_SPREADSHEET_ID_HERE";
-const WEB_APP_URL = "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE"; 
+const SPREADSHEET_ID = "https://docs.google.com/spreadsheets/d/1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs/edit?gid=1163952619#gid=1163952619";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
 // --- SYSTEM LOGIC ---
@@ -88,6 +88,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
