@@ -1,4 +1,9 @@
-// 1. CONFIGURATION
+/**
+ * ACK GITUNDU MANAGEMENT SYSTEM - FINAL PRODUCTION VERSION
+ * Full Script with Dashboard, 2026 Weekly History, and Member Statements
+ */
+
+// 1. CONFIGURATION (Ensure these are your actual IDs)
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
@@ -9,7 +14,7 @@ let weekKeys = [];
 let currentWeekIndex = 0;
 let rawMemberGiving = []; 
 
-// 3. PAGE LOAD LOGIC
+// 3. PAGE LOAD INITIALIZATION
 window.onload = function() {
     console.log("App Initialized");
     const savedRole = localStorage.getItem('ackRole');
@@ -47,14 +52,14 @@ function showDashboard(role) {
     container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
 }
 
-// 5. DATA FETCHING
+// 5. DATA FETCHING & SYNC
 async function fetchDashboardData() {
     try {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
         
         if (data.status === "success") {
-            // Cards
+            // Update Annual Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
             const bal = data.finance.balance || 0;
@@ -62,17 +67,23 @@ async function fetchDashboardData() {
             bEl.innerText = "KES " + bal.toLocaleString();
             bEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly Processing
+            // Process Weekly Data (STRICT 2026 FILTER)
             rawMemberGiving = data.memberGiving || [];
             weeklyDataGrouped = data.weeklyHistory || {};
+            
+            // This line ensures we only see 2026 Sundays
             weekKeys = Object.keys(weeklyDataGrouped)
-                .filter(d => new Date(d).getFullYear() >= 2026)
+                .filter(d => {
+                    const year = new Date(d).getFullYear();
+                    return year === 2026;
+                })
                 .sort((a, b) => new Date(a) - new Date(b));
             
+            // Set to the most recent Sunday
             currentWeekIndex = weekKeys.length - 1;
             updateWeeklyDisplay();
 
-            // Member Table - FIXED VERSION
+            // Build Member List Table
             const tbody = document.querySelector('#members-table tbody');
             if (tbody) {
                 tbody.innerHTML = data.members.map(m => {
@@ -86,12 +97,12 @@ async function fetchDashboardData() {
                 }).join('');
             }
 
-            // Growth Table
+            // Build Monthly Growth Table
             const gDiv = document.getElementById('monthly-table-data');
             if (gDiv) {
                 let h = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
                 data.growth.forEach(r => {
-                    h += `<tr><td>${r.month}</td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green':'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
+                    h += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green':'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
                 });
                 gDiv.innerHTML = h + "</tbody></table>";
             }
@@ -101,74 +112,90 @@ async function fetchDashboardData() {
     }
 }
 
-// 6. WEEKLY DISPLAY LOGIC
+// 6. WEEKLY DISPLAY (Dashboard View)
 function updateWeeklyDisplay() {
-    if (weekKeys.length === 0) return;
+    if (weekKeys.length === 0) {
+        document.getElementById('week-label').innerText = "No 2026 Data Found";
+        return;
+    }
     const dateStr = weekKeys[currentWeekIndex];
     const week = weeklyDataGrouped[dateStr];
-    document.getElementById('week-label').innerText = new Date(dateStr).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+    
+    // Nice Date Label
+    const dateObj = new Date(dateStr);
+    document.getElementById('week-label').innerText = dateObj.toLocaleDateString('en-GB', {
+        day: 'numeric', month: 'long', year: 'numeric'
+    });
 
     const clean = (v) => parseFloat(String(v).replace(/,/g, '')) || 0;
 
-    let incT = 0, expT = 0;
-    let incH = week.income.filter(i => i.name && !i.name.includes("TOTAL")).map(i => {
-        incT += clean(i.amount);
-        return `<li>${i.name} <span>${clean(i.amount).toLocaleString()}</span></li>`;
-    }).join('');
+    // Filter and Sum Income (Ignore phantom rows)
+    let incT = 0;
+    let incH = week.income
+        .filter(i => i.name && !i.name.toUpperCase().includes("TOTAL") && clean(i.amount) > 0)
+        .map(i => {
+            const amt = clean(i.amount);
+            incT += amt;
+            return `<li>${i.name} <span>${amt.toLocaleString()}</span></li>`;
+        }).join('');
     
-    let expH = week.expense.filter(e => e.name && !e.name.includes("TOTAL")).map(e => {
-        expT += clean(e.amount);
-        return `<li>${e.name} <span>${clean(e.amount).toLocaleString()}</span></li>`;
-    }).join('');
+    // Filter and Sum Expenses
+    let expT = 0;
+    let expH = week.expense
+        .filter(e => e.name && !e.name.toUpperCase().includes("TOTAL") && clean(e.amount) > 0)
+        .map(e => {
+            const amt = clean(e.amount);
+            expT += amt;
+            return `<li>${e.name} <span>${amt.toLocaleString()}</span></li>`;
+        }).join('');
 
-    document.getElementById('income-details').innerHTML = incH + `<li class="total-row">TOTAL <span>${incT.toLocaleString()}</span></li>`;
-    document.getElementById('expense-details').innerHTML = expH + `<li class="total-row">TOTAL <span>${expT.toLocaleString()}</span></li>`;
+    document.getElementById('income-details').innerHTML = (incH || "<li>No income</li>") + 
+        `<li class="total-row">TOTAL INCOME <span>${incT.toLocaleString()}</span></li>`;
+    
+    document.getElementById('expense-details').innerHTML = (expH || "<li>No expense</li>") + 
+        `<li class="total-row">TOTAL EXPENSE <span>${expT.toLocaleString()}</span></li>`;
 
-    // Analytics
+    // Cell Rankings
     let cells = {};
+    const targetTime = new Date(dateStr).setHours(0,0,0,0);
     rawMemberGiving.forEach(r => {
-        if (new Date(r[0]).toDateString() === new Date(dateStr).toDateString()) {
+        const recordTime = new Date(r[0]).setHours(0,0,0,0);
+        if (recordTime === targetTime) {
             cells[r[1]] = (cells[r[1]] || 0) + clean(r[2]);
         }
     });
     const sorted = Object.entries(cells).sort((a,b) => b[1]-a[1]);
-    document.getElementById('cell-analytics-data').innerHTML = sorted.map(c => `<div style="display:flex;justify-content:space-between;padding:5px 0;"><span>${c[0]}</span><span>KES ${c[1].toLocaleString()}</span></div>`).join('');
+    document.getElementById('cell-analytics-data').innerHTML = sorted.length > 0 ? sorted.map((c, i) => {
+        return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dotted #eee;">
+            <span><b>${i+1}. ${c[0]}</b></span><span>KES ${c[1].toLocaleString()}</span>
+        </div>`;
+    }).join('') : "<p style='text-align:center;'>No Cell data this week.</p>";
 }
 
-// 7. STATEMENT POPUP
+// 7. INDIVIDUAL MEMBER STATEMENT LOGIC
 async function viewStatement(name) {
-    const start = prompt("Start Date (YYYY-MM-DD):", "2026-01-01");
-    const end = prompt("End Date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+    const start = prompt("View statement from (YYYY-MM-DD):", "2026-01-01");
+    const end = prompt("To (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
     if (!start || !end) return;
 
     const url = `${WEB_APP_URL}?action=getStatement&name=${encodeURIComponent(name)}&start=${start}&end=${end}`;
     try {
         const res = await fetch(url);
         const d = await res.json();
-        if (!d.history || d.history.length === 0) return alert("No records found.");
+        if (!d.history || d.history.length === 0) return alert("No records found for this period.");
 
-        let m = `STATEMENT: ${d.name}\nTotal: KES ${d.summary.total.toLocaleString()}\n\nRecent History:\n`;
-        d.history.forEach(h => m += `${h.date}: ${h.total}\n`);
+        let m = `OFFICIAL STATEMENT: ${d.name}\n`;
+        m += `Period: ${start} to ${end}\n`;
+        m += `--------------------------\n`;
+        m += `Tithes: ${d.summary.tithe.toLocaleString()}\n`;
+        m += `Pledges: ${d.summary.pledge.toLocaleString()}\n`;
+        m += `Others: ${d.summary.others.toLocaleString()}\n`;
+        m += `TOTAL: KES ${d.summary.total.toLocaleString()}\n`;
+        m += `--------------------------\n`;
+        m += `Recent Contributions:\n`;
+        d.history.slice(0, 5).forEach(h => m += `${h.date}: ${h.total.toLocaleString()}\n`);
         alert(m);
-    } catch (e) { alert("Error loading statement."); }
-}
-
-// 8. UTILITIES
-function changeWeek(n) { currentWeekIndex += n; if(currentWeekIndex<0) currentWeekIndex=0; if(currentWeekIndex>=weekKeys.length) currentWeekIndex=weekKeys.length-1; updateWeeklyDisplay(); }
-function switchTab(id, b) {
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active-content'));
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.getElementById('tab-'+id).classList.add('active-content');
-    b.classList.add('active');
-}
-function logout() { localStorage.removeItem('ackRole'); location.reload(); }
-function searchTable() {
-    let val = document.getElementById('memberSearch').value.toUpperCase();
-    let rows = document.querySelector("#members-table tbody").rows;
-    for (let i = 0; i < rows.length; i++) {
-        rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
-    }
-}
+    } catch (e) { alert
 
 
 
