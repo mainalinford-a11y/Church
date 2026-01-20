@@ -14,56 +14,55 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Incorrect Code."); }
+    } else { alert("Incorrect Access Code."); }
 }
 
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('user-tag').innerText = `(${role} MODE)`;
-
-    const container = document.getElementById('spreadsheet-container');
-    let sheetUrl = role === "EDITOR" 
-        ? `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit?rm=minimal` 
-        : `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/preview?rm=minimal`;
     
-    container.innerHTML = `<iframe src="${sheetUrl}"></iframe>`;
+    const container = document.getElementById('spreadsheet-container');
+    let mode = (role === "EDITOR") ? "edit" : "preview";
+    container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
 }
 
 async function fetchDashboardData() {
     try {
         const response = await fetch(WEB_APP_URL);
         const data = await response.json();
-        
         if(data.status === "success") {
-            // Update Summary Cards
+            // Main Cards
             document.getElementById('total-income').innerText = "KES " + Number(data.finance.income).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + Number(data.finance.expense).toLocaleString();
             document.getElementById('total-balance').innerText = "KES " + Number(data.finance.balance).toLocaleString();
 
-            // Weekly Breakdown - Income (Column C / Index 2)
+            // Weekly Lists
             document.getElementById('income-details').innerHTML = data.finance.details
-                .map(row => (Number(row[2]) > 0) ? `<li>${row[1]} <b>${Number(row[2]).toLocaleString()}</b></li>` : '')
-                .join('');
-            
-            // Weekly Breakdown - Expenditure (Column D / Index 3)
+                .map(row => row[2] > 0 ? `<li>${row[1]} <b>${Number(row[2]).toLocaleString()}</b></li>` : '').join('');
             document.getElementById('expense-details').innerHTML = data.finance.details
-                .map(row => (Number(row[3]) > 0) ? `<li>${row[1]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '')
-                .join('');
+                .map(row => row[3] > 0 ? `<li>${row[1]} <b>${Number(row[3]).toLocaleString()}</b></li>` : '').join('');
 
-            // Monthly Progress Table
+            // Cell Leaderboard (FIXED)
+            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((cell, i) => `
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee;">
+                    <span>#${i+1} ${cell[0]}</span><b>${Number(cell[1]).toLocaleString()}</b>
+                </div>`).join('');
+
+            // Members Table (FIXED)
+            if (data.members && data.members.length > 0) {
+                document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `
+                    <tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+            }
+
+            // Monthly Progress
             let growthHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
-            data.growth.forEach((row) => {
-                growthHtml += `<tr>
-                    <td><b>${row.month}</b></td>
-                    <td>${Number(row.inc).toLocaleString()}</td>
-                    <td>${Number(row.exp).toLocaleString()}</td>
-                    <td style="color:${row.bal >= 0 ? 'green' : 'red'}"><b>${Number(row.bal).toLocaleString()}</b></td>
-                </tr>`;
+            data.growth.forEach(row => {
+                growthHtml += `<tr><td><b>${row.month}</b></td><td>${Number(row.inc).toLocaleString()}</td><td>${Number(row.exp).toLocaleString()}</td><td style="color:${row.bal >= 0 ? 'green' : 'red'}"><b>${Number(row.bal).toLocaleString()}</b></td></tr>`;
             });
             document.getElementById('growth-chart-data').innerHTML = growthHtml + "</tbody></table>";
         }
-    } catch (e) { console.error("Sync error:", e); }
+    } catch (e) { console.error("Sync Error:", e); }
 }
 
 function switchTab(tabName) {
@@ -82,6 +81,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
