@@ -1,9 +1,7 @@
-// CONFIGURATION
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
-// STATE MANAGEMENT
 let weeklyDataGrouped = {};
 let weekKeys = [];
 let currentWeekIndex = 0;
@@ -20,7 +18,7 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Incorrect Access Code."); }
+    } else { alert("Access Denied."); }
 }
 
 function showDashboard(role) {
@@ -38,62 +36,52 @@ async function fetchDashboardData() {
         const data = await response.json();
         
         if(data.status === "success") {
-            // Update Top Cards
+            // Cards
             document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
             document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
-            const netBal = data.finance.balance || 0;
-            const netEl = document.getElementById('total-balance');
-            netEl.innerText = "KES " + netBal.toLocaleString();
-            netEl.style.color = netBal >= 0 ? "green" : "red";
+            const bal = data.finance.balance || 0;
+            const balEl = document.getElementById('total-balance');
+            balEl.innerText = "KES " + bal.toLocaleString();
+            balEl.style.color = bal >= 0 ? "green" : "red";
 
-            // Setup Weekly Navigation
+            // Weekly Nav
             weeklyDataGrouped = data.weeklyHistory;
-            weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(b) - new Date(a)); // Newest first
+            weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(b) - new Date(a));
             currentWeekIndex = 0;
             updateWeeklyDisplay();
 
-            // Cell Leaderboard
-            document.getElementById('leaderboard-data').innerHTML = data.topCells
-                .map((c, i) => `<div class="leaderboard-item" style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;"><span>#${i+1} ${c[0]}</span><b>${Number(c[1]).toLocaleString()}</b></div>`).join('');
-
-            // Members Table
-            document.querySelector('#members-table tbody').innerHTML = data.members
-                .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
-
-            // Monthly Progress Table
-            let gHtml = "<table class='growth-table' style='width:100%; border-collapse:collapse;'><thead><tr style='background:#f4f4f4;'><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
+            // Tables
+            document.getElementById('leaderboard-data').innerHTML = data.topCells.map((c, i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;"><span>#${i+1} ${c[0]}</span><b>${Number(c[1]).toLocaleString()}</b></div>`).join('');
+            document.querySelector('#members-table tbody').innerHTML = data.members.map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
+            
+            let gHtml = "<table class='growth-table'><thead><tr><th>Month</th><th>Income</th><th>Exp</th><th>Bal</th></tr></thead><tbody>";
             data.growth.forEach(r => {
                 gHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}"><b>${Number(r.bal).toLocaleString()}</b></td></tr>`;
             });
             document.getElementById('growth-chart-data').innerHTML = gHtml + "</tbody></table>";
         }
-    } catch (e) { console.error("Data fetch error:", e); }
+    } catch (e) { console.error(e); }
 }
 
 function updateWeeklyDisplay() {
     if (weekKeys.length === 0) return;
     const dateKey = weekKeys[currentWeekIndex];
     const weekData = weeklyDataGrouped[dateKey];
-    
     document.getElementById('week-label').innerText = dateKey;
 
-    // Income Side
-    let incHtml = weekData.income.map(item => `<li>${item.name} <b>${Number(item.amount).toLocaleString()}</b></li>`).join('');
-    incHtml += `<li style="border-top:2px solid #eee; margin-top:5px; font-weight:bold;">TOTAL INCOME <b>${(weekData.totals.inc || 0).toLocaleString()}</b></li>`;
+    let incHtml = weekData.income.map(i => `<li>${i.name} <span>${i.amount.toLocaleString()}</span></li>`).join('');
+    incHtml += `<li class="total-row">TOTAL INCOME <span>${(weekData.totals.inc || 0).toLocaleString()}</span></li>`;
     document.getElementById('income-details').innerHTML = incHtml;
 
-    // Expenditure Side
-    let expHtml = weekData.expense.map(item => `<li>${item.name} <b>${Number(item.amount).toLocaleString()}</b></li>`).join('');
-    expHtml += `<li style="border-top:2px solid #eee; margin-top:5px; font-weight:bold;">TOTAL EXPENDITURE <b>${(weekData.totals.exp || 0).toLocaleString()}</b></li>`;
-    
-    // Weekly Balance Row
+    let expHtml = weekData.expense.map(e => `<li>${e.name} <span>${e.amount.toLocaleString()}</span></li>`).join('');
+    expHtml += `<li class="total-row">TOTAL EXPENDITURE <span>${(weekData.totals.exp || 0).toLocaleString()}</span></li>`;
     const wBal = weekData.totals.bal || 0;
-    expHtml += `<li style="color:${wBal >= 0 ? 'green' : 'red'}; font-weight:bold; font-size: 1.1em;">BALANCE <b>${wBal.toLocaleString()}</b></li>`;
+    expHtml += `<li style="color:${wBal >= 0 ? 'green' : 'red'}; font-weight:bold;">WEEKLY BALANCE <span>${wBal.toLocaleString()}</span></li>`;
     document.getElementById('expense-details').innerHTML = expHtml;
 }
 
-function changeWeek(direction) {
-    currentWeekIndex += direction;
+function changeWeek(dir) {
+    currentWeekIndex += dir;
     if (currentWeekIndex < 0) currentWeekIndex = 0;
     if (currentWeekIndex >= weekKeys.length) currentWeekIndex = weekKeys.length - 1;
     updateWeeklyDisplay();
@@ -105,7 +93,16 @@ function switchTab(t) {
     event.currentTarget.classList.add('active');
 }
 
+function searchTable() {
+    let input = document.getElementById('memberSearch').value.toUpperCase();
+    let rows = document.querySelector("#members-table tbody").rows;
+    for (let i = 0; i < rows.length; i++) {
+        rows[i].style.display = rows[i].cells[0].innerText.toUpperCase().includes(input) ? "" : "none";
+    }
+}
+
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
