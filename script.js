@@ -1,10 +1,11 @@
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
-const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
+ const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
 
 let weeklyDataGrouped = {};
 let weekKeys = [];
 let currentWeekIndex = 0;
+let rawMemberGiving = []; // To store giving data for analytics
 
 window.onload = () => {
     const saved = localStorage.getItem('ackRole');
@@ -43,20 +44,14 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly Data - Sorted Jan to Dec
+            // Store Giving Data for Weekly Analytics
+            rawMemberGiving = data.memberGiving || [];
+
+            // Weekly History - Sort chronologically
             weeklyDataGrouped = data.weeklyHistory;
             weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
-            
-            // Set to 0 (Jan) by default, but user can click "Jump to Latest"
             currentWeekIndex = 0; 
             updateWeeklyDisplay();
-
-            // Cell Analytics
-            document.getElementById('cell-analytics-data').innerHTML = data.topCells
-                .map((c, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
-                    <span><b>${i+1}. ${c[0]}</b></span>
-                    <span>KES ${Number(c[1]).toLocaleString()}</span>
-                </div>`).join('');
 
             // Full Member List
             document.querySelector('#members-table tbody').innerHTML = data.members
@@ -80,7 +75,7 @@ function updateWeeklyDisplay() {
 
     const cleanNum = (val) => parseFloat(String(val).replace(/,/g, '')) || 0;
 
-    // Process INCOME list and sum
+    // 1. Process INCOME for the cards
     let calcIncomeTotal = 0;
     let incHtml = weekData.income
         .filter(i => i.name && !i.name.toUpperCase().includes("TOTAL") && cleanNum(i.amount) > 0)
@@ -93,7 +88,34 @@ function updateWeeklyDisplay() {
     document.getElementById('income-details').innerHTML = incHtml + 
         `<li class="total-row">TOTAL INCOME <span>${calcIncomeTotal.toLocaleString()}</span></li>`;
 
-    // Process EXPENDITURE list and sum
+    // 2. Process WEEKLY CELL ANALYTICS (Godly Competition)
+    // We filter the raw giving data by the currently selected Week Ending date
+    let cellRankings = {};
+    rawMemberGiving.forEach(record => {
+        // record[0] = Date, record[1] = Cell Name, record[2] = Amount
+        if (record[0] === dateKey) {
+            let cellName = record[1] || "Unknown Cell";
+            let amount = cleanNum(record[2]);
+            cellRankings[cellName] = (cellRankings[cellName] || 0) + amount;
+        }
+    });
+
+    let sortedCells = Object.entries(cellRankings).sort((a, b) => b[1] - a[1]);
+    
+    if (sortedCells.length > 0) {
+        document.getElementById('cell-analytics-data').innerHTML = sortedCells
+            .map((c, i) => {
+                let trophy = i === 0 ? " 🏆" : ""; // Trophy for the winner
+                return `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
+                    <span><b>${i+1}. ${c[0]}${trophy}</b></span>
+                    <span>KES ${c[1].toLocaleString()}</span>
+                </div>`;
+            }).join('');
+    } else {
+        document.getElementById('cell-analytics-data').innerHTML = "<p style='color:#7f8c8d; text-align:center;'>No Cell Giving recorded for this week.</p>";
+    }
+
+    // 3. Process EXPENDITURE
     let calcExpenseTotal = 0;
     let expHtml = weekData.expense
         .filter(e => e.name && !e.name.toUpperCase().includes("TOTAL") && cleanNum(e.amount) > 0)
@@ -104,11 +126,9 @@ function updateWeeklyDisplay() {
         }).join('');
 
     const weeklyBalance = calcIncomeTotal - calcExpenseTotal;
-    let balanceColor = weeklyBalance >= 0 ? "#27ae60" : "#e74c3c";
-    
     document.getElementById('expense-details').innerHTML = expHtml + 
         `<li class="total-row">TOTAL EXPENDITURE <span>${calcExpenseTotal.toLocaleString()}</span></li>` +
-        `<li style="color:${balanceColor}; font-weight:bold; border:none; margin-top:8px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
+        `<li style="color:${weeklyBalance >= 0 ? '#27ae60' : '#e74c3c'}; font-weight:bold; border:none; margin-top:8px; font-size:1.1rem;">WEEKLY BALANCE <span>${weeklyBalance.toLocaleString()}</span></li>`;
 }
 
 function changeWeek(dir) {
@@ -118,7 +138,6 @@ function changeWeek(dir) {
     updateWeeklyDisplay();
 }
 
-// NEW FUNCTION: Jump to the very last week available
 function jumpToLatest() {
     if (weekKeys.length > 0) {
         currentWeekIndex = weekKeys.length - 1;
@@ -142,6 +161,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
