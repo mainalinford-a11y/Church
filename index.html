@@ -24,7 +24,7 @@
                 <h1>ST MARKS ACK GITUNDU</h1>
                 <span id="user-tag"></span>
             </div>
-            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i></button>
+            <button class="logout-btn" onclick="logout()" title="Logout"><i class="fas fa-sign-out-alt"></i></button>
         </header>
 
         <nav class="tabs">
@@ -52,14 +52,14 @@
 
             <div class="grid-container">
                 <div class="panel">
-                    <h3>Weekly Breakdown</h3>
+                    <h3>Weekly Financial Breakdown</h3>
                     <div class="breakdown-lists">
                         <div class="list-col">
-                            <h4 style="color:#2980b9">Income</h4>
+                            <h4 style="color:#2980b9">Income Details</h4>
                             <ul id="income-details" class="detail-list"></ul>
                         </div>
                         <div class="list-col" style="border-left: 1px solid #eee; padding-left: 15px;">
-                            <h4 style="color:#c0392b">Expenditure</h4>
+                            <h4 style="color:#c0392b">Expense Details</h4>
                             <ul id="expense-details" class="detail-list"></ul>
                         </div>
                     </div>
@@ -72,14 +72,15 @@
         </div>
 
         <div id="tab-spreadsheet" class="tab-content">
-            <div class="panel" style="height: 80vh; padding: 0; overflow: hidden;">
-                <div id="spreadsheet-container" style="height: 100%; width: 100%;"></div>
+            <div class="panel" style="height: 80vh; padding: 0; overflow: hidden; position: relative;">
+                <div id="spreadsheet-container" style="height: 100%; width: 100%;">
+                    </div>
             </div>
         </div>
 
         <div id="tab-analytics" class="tab-content">
             <div class="panel">
-                <h3>Annual Financial Progress</h3>
+                <h3>Annual Financial Summary</h3>
                 <div id="growth-chart-data"></div>
             </div>
         </div>
@@ -98,6 +99,7 @@
     <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
