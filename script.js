@@ -63,7 +63,7 @@ async function fetchDashboardData() {
                 .filter(d => new Date(d).getFullYear() === 2026)
                 .sort((a, b) => new Date(a) - new Date(b));
             
-            currentWeekIndex = weekKeys.length - 1;
+            currentWeekIndex = 0;
             updateWeeklyDisplay();
 
             // Build Members Table with Statement Button
@@ -160,6 +160,7 @@ function searchTable() {
         rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
     }
 }
+
 
 
 
