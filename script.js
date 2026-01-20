@@ -1,8 +1,8 @@
- /**
+/**
  * ACK GITUNDU MANAGEMENT SYSTEM - FRONTEND
- * Features: Dashboard, Weekly History (No Phantoms), Member Giving Automation, & Individual Statements
  */
 
+// 1. MAKE SURE THESE ARE CORRECT
 const SPREADSHEET_ID = "1NOl0KMh6HA5cteNHYcXEtCq9voN4-kRFjVi-kiowkZs";
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzV22XjDFuIplf2Wpc8WEcyF3ucI2aNeGnWtyXXVCqynXdqfLLG8lEM3INJ5UKdga_esQ/exec"; 
 const CODES = { ADMIN: "TR-2026", VIEW: "COM-2026" };
@@ -12,19 +12,41 @@ let weekKeys = [];
 let currentWeekIndex = 0;
 let rawMemberGiving = []; 
 
+// This runs as soon as the page loads
 window.onload = () => {
+    console.log("Portal Loaded");
     const saved = localStorage.getItem('ackRole');
-    if (saved) { showDashboard(saved); fetchDashboardData(); }
+    if (saved) { 
+        showDashboard(saved); 
+        fetchDashboardData(); 
+    }
 };
 
+// LOGIN FUNCTION
 function checkLogin() {
-    const code = document.getElementById('pass').value;
-    let role = (code === CODES.ADMIN) ? "EDITOR" : (code === CODES.VIEW ? "VIEWER" : null);
+    console.log("Login button clicked");
+    const passInput = document.getElementById('pass');
+    if (!passInput) {
+        console.error("Input field 'pass' not found");
+        return;
+    }
+    
+    const code = passInput.value.trim();
+    let role = null;
+
+    if (code === CODES.ADMIN) {
+        role = "EDITOR";
+    } else if (code === CODES.VIEW) {
+        role = "VIEWER";
+    }
+
     if (role) {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Access Denied."); }
+    } else { 
+        alert("Access Denied. Please check your code."); 
+    }
 }
 
 function showDashboard(role) {
@@ -33,6 +55,56 @@ function showDashboard(role) {
     const container = document.getElementById('spreadsheet-container');
     let mode = (role === "EDITOR") ? "edit" : "preview";
     container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
+}
+
+async function fetchDashboardData() {
+    console.log("Fetching data...");
+    try {
+        const response = await fetch(WEB_APP_URL);
+        const data = await response.json();
+        if(data.status === "success") {
+            // Update Annual Summary Cards
+            document.getElementById('total-income').innerText = "KES " + (data.finance.income || 0).toLocaleString();
+            document.getElementById('total-expense').innerText = "KES " + (data.finance.expense || 0).toLocaleString();
+            const bal = data.finance.balance || 0;
+            const balEl = document.getElementById('total-balance');
+            balEl.innerText = "KES " + bal.toLocaleString();
+            balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
+
+            rawMemberGiving = data.memberGiving || [];
+            weeklyDataGrouped = data.weeklyHistory;
+            
+            weekKeys = Object.keys(weeklyDataGrouped)
+                .filter(dateStr => new Date(dateStr).getFullYear() >= 2026)
+                .sort((a,b) => new Date(a) - new Date(b));
+            
+            currentWeekIndex = weekKeys.length - 1; 
+            updateWeeklyDisplay();
+
+            // Build Member List with updated row mapping
+            const tbody = document.querySelector('#members-table tbody');
+            if (tbody) {
+                tbody.innerHTML = data.members.map(m => {
+                    return `<tr>
+                        <td><b>${m[0]}</b></td>
+                        <td>${m[1]}</td>
+                        <td>${m[2]}</td>
+                        <td><button onclick="viewStatement('${m[0].replace(/'/g, "\\'")}')" class="statement-btn">Statement</button></td>
+                    </tr>`;
+                }).join('');
+            }
+            
+            // Build Monthly Growth Table
+            const monthlyTable = document.getElementById('monthly-table-data');
+            if (monthlyTable) {
+                let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
+                data.growth.forEach(r => { 
+                    mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`; 
+                });
+                monthlyTable.innerHTML = mHtml + "</tbody></table>";
+            }
+        }
+    } catch (e) { console.error("Sync Error:", e); }
 }
 
 async function fetchDashboardData() {
@@ -135,6 +207,7 @@ function updateWeeklyDisplay() {
     let sortedCells = Object.entries(cellRankings).sort((a, b) => b[1] - a[1]);
     document.getElementById('cell-analytics-data').innerHTML = sortedCells.length > 0 ? sortedCells.map((c, i) => {
         let medal =
+
 
 
 
