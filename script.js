@@ -18,7 +18,7 @@ function checkLogin() {
         localStorage.setItem('ackRole', role);
         showDashboard(role);
         fetchDashboardData();
-    } else { alert("Incorrect code."); }
+    } else { alert("Access Denied."); }
 }
 
 function showDashboard(role) {
@@ -43,28 +43,31 @@ async function fetchDashboardData() {
             balEl.innerText = "KES " + bal.toLocaleString();
             balEl.style.color = bal >= 0 ? "#27ae60" : "#e74c3c";
 
-            // Weekly Navigation
+            // Weekly Navigation - SORTED JAN TO DEC
             weeklyDataGrouped = data.weeklyHistory;
-            weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(b) - new Date(a));
-            currentWeekIndex = 0;
+            weekKeys = Object.keys(weeklyDataGrouped).sort((a,b) => new Date(a) - new Date(b));
+            currentWeekIndex = 0; // Starts at the first available week in Jan
             updateWeeklyDisplay();
 
-            // Members: Populate Quick View (Overview) and Full List (Members Tab)
-            const members = data.members;
-            document.querySelector('#quick-member-table tbody').innerHTML = members.slice(-10).reverse()
-                .map(m => `<tr><td>${m[0]}</td><td>${m[1]}</td><td>${m[3]}</td></tr>`).join('');
-            
-            document.querySelector('#members-table tbody').innerHTML = members
+            // Cell Analytics (Restored to Overview)
+            document.getElementById('cell-analytics-data').innerHTML = data.topCells
+                .map((c, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee;">
+                    <span><b>${i+1}. ${c[0]}</b></span>
+                    <span>KES ${Number(c[1]).toLocaleString()}</span>
+                </div>`).join('');
+
+            // Full Member List (In Members Tab)
+            document.querySelector('#members-table tbody').innerHTML = data.members
                 .map(m => `<tr><td><b>${m[0]}</b></td><td>${m[1]}</td><td>${m[2]}</td><td>${m[3]}</td><td>${m[4]}</td></tr>`).join('');
 
-            // Monthly Progress (Now in its own tab)
+            // Monthly Progress
             let mHtml = "<table><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Balance</th></tr></thead><tbody>";
             data.growth.forEach(r => {
                 mHtml += `<tr><td><b>${r.month}</b></td><td>${Number(r.inc).toLocaleString()}</td><td>${Number(r.exp).toLocaleString()}</td><td style="color:${r.bal >= 0 ? 'green' : 'red'}">${Number(r.bal).toLocaleString()}</td></tr>`;
             });
             document.getElementById('monthly-table-data').innerHTML = mHtml + "</tbody></table>";
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Fetch Error:", e); }
 }
 
 function updateWeeklyDisplay() {
@@ -107,6 +110,7 @@ function searchTable() {
 }
 
 function logout() { localStorage.removeItem('ackRole'); location.reload(); }
+
 
 
 
