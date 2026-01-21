@@ -26,7 +26,7 @@ function checkLogin() {
 
     if (role) {
         localStorage.setItem('ackRole', role);
-        showDashboard(role);
+        (role);
         fetchDashboardData();
     } else {
         alert("Incorrect Access Code.");
@@ -36,9 +36,27 @@ function checkLogin() {
 function showDashboard(role) {
     document.getElementById('login-container').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
+    
     const container = document.getElementById('spreadsheet-container');
     const mode = (role === "EDITOR") ? "edit" : "preview";
+    
+    // 1. Create the Iframe
     container.innerHTML = `<iframe src="https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/${mode}?rm=minimal"></iframe>`;
+
+    // 2. Add the "Direct Link" button ONLY for Treasury (EDITOR)
+    if (role === "EDITOR") {
+        const editLink = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`;
+        const btnHtml = `
+            <div style="margin: 15px 0; text-align: center;">
+                <a href="${editLink}" target="_blank" 
+                   style="background-color: #27ae60; color: white; padding: 12px 20px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                   🚀 Open Full Sheets App (to Edit)
+                </a>
+                <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">Use this to see all tabs and edit on your phone.</p>
+            </div>`;
+        // Insert the button above the spreadsheet window
+        container.insertAdjacentHTML('beforebegin', btnHtml);
+    }
 }
 
 // 4. DATA HANDLING
@@ -197,6 +215,7 @@ function searchTable() {
         rows[i].style.display = rows[i].innerText.toUpperCase().includes(val) ? "" : "none";
     }
 }
+
 
 
 
